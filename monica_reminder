@@ -1,0 +1,278 @@
+#! /bin/bash
+
+initdatahome() {
+  DATA_HOME=${DATA_HOME:-"/var/www/html/storage"}/$(basename "$0")_data
+  if [[ ! -d "$DATA_HOME" ]]; then
+    if ! mkdir -p "$DATA_HOME"; then
+      log "failed to create DATA_HOME: $DATA_HOME, running as user: $(whoami)" ; exit 1
+    fi
+  fi
+  if [[ ! -w "$DATA_HOME" ]]; then
+    log "no permission to write to DATA_HOME: $DATA_HOME, running as user: $(whoami)" ; exit 1
+  fi
+}
+
+sendsmtp() {
+  # [msmtp](https://marlam.de/msmtp/msmtp.html)
+  local _mailto;_mailto="$1";shift
+  local _mail;_mail="$1";shift
+  local _maillog;
+
+  [ "$NOSEND" == "true" ] ||
+  _maillog=$(msmtp --host="$MAIL_HOST" --port="$MAIL_PORT" \
+        --auth=on --user="$MAIL_USERNAME" \
+        --tls=on --tls-starttls=off \
+        --from="$MAIL_FROM_ADDRESS" \
+        --passwordeval="echo $MAIL_PASSWORD" \
+        "$_mailto" 2>&1 < <(echo -e "$_mail")) || {
+        log "mailing failed"
+        log "$_maillog"
+        exit 1
+      }
+}
+
+sendmail() {
+  local  _email;_email="$1";shift  # email address
+  local  _emailnice;_emailnice="$1";shift  # preferred name for recipient
+  local -i _nthday;_nthday="$1";shift # This is nth day reminder (can be 0)
+  local _contact;_contact="$1";shift # The contact
+  local _title;_title="$1";shift # Title of the reminder
+  local _late;_late="$1";shift # Is this reminder late? true/false
+
+  local _subjectPrefix=""
+  if [[ "$_late" = "true" ]]; then
+    _subjectPrefix="[LATE] "
+  fi
+
+  if [[ "$_nthday" -eq 0 ]]; then
+    _subjectPrefix+="It's today! Reminder"
+    _bodyprefix="It's today! Here's your reminder for"
+  else
+    _subjectPrefix+="$_nthday day reminder"
+    _bodyprefix="It's exactly $_nthday days until"
+  fi
+  local _message="\
+From: $MAIL_FROM_NAME <$MAIL_FROM_ADDRESS>
+To: $_email
+Subject: $_subjectPrefix regarding $_contact - $_title
+
+Dear $_emailnice,
+
+$_bodyprefix \"$_title\" for $_contact.
+
+You asked me to let you know. Now you know!
+
+Monica xoxo
+"
+  log "Send following message to: $_email"
+  log "$_message"
+
+  [ "$DRYRUN" == "true" ] || sendsmtp "$_email" "$_message"
+}
+
+nearest_occurence() {
+  # TODO: this only works for frequency_type: "year"
+  # for "one_time" we should simply return the date we're given
+  #
+  # result is also in ISO format
+  local _today=$1;shift # in ISO format
+  local _reminder=$1 # in ISO format
+  local -i _halfyear=$((31556926/2)) # in epoch seconds
+
+  local _thisyear;_thisyear=$(date -u -I -d "$_today");_thisyear=${_thisyear:0:4}
+  local _lastyear;_lastyear=$((_thisyear - 1))
+  local _nextyear;_nextyear=$((_thisyear + 1))
+  local -a _yearstotry=("$_lastyear" "$_thisyear" "$_nextyear")
+
+  for _year in "${_yearstotry[@]}"; do
+    local _datetotry;_datetotry="$_year${_reminder:4}"
+    _diff=$(( $(date -d "$_datetotry" +%s) - $(date -d "$_today" +%s) ))
+    _diff=${_diff#-}
+    if [[ "$_diff" -lt "$_halfyear" ]]; then
+      echo "$_datetotry"
+      return
+    fi
+  done
+
+  return 1
+}
+
+initlogging() {
+  declare -g logrotateday=${LOGROTATEDAY:-10}
+  declare -g logdir=${LOGDIR:-/var/www/html/storage/logs}
+  declare -g logfile;logfile="$logdir/$(basename "$0")_$(date --rfc-3339=seconds)".log
+
+  # https://stackoverflow.com/a/806923
+  if ! [[ $logrotateday =~ ^[0-9]+$ ]]; then
+    echo "monica_reminder: LOGROTATEDAY was '$LOGROTATEDAY' but must be a number!" ; exit 1
+  fi
+
+  if [[ "$logdir" != "-" ]]; then
+    if [[ ! -d "$logdir" ]]; then
+      if ! mkdir -p "$logdir"; then
+        echo "monica_reminder: failed to create logdir: $logdir" ; exit 1
+      fi
+    fi
+    if [[ ! -w "$logdir" ]]; then
+      echo "monica_reminder: no permission to write to logdir: $logdir, running as user: $(whoami)" ; exit 1
+    fi
+
+    if ! touch "$logfile"; then
+      echo "monica_reminder: failed to touch new logfile: $logfile" ; exit 1
+    fi
+
+    if ! find "$logdir" -type f -name "$(basename "$0")_*" -mtime +"${logrotateday}" -exec rm {} \;; then
+      echo "monica_reminder: failed to clean old log files. Aborting" ; exit 1
+    fi
+  fi
+}
+
+log() {
+  if [[ "$logdir" == "-" ]]; then
+    echo "monica_reminder: $1"
+  else
+    echo "$1" >> "$logfile"
+  fi
+}
+
+preflight() {
+  if [[ -v TODAY ]]; then
+    date -d "$TODAY" > /dev/null || {
+      log "TODAY was invalid date: $TODAY"
+      exit 1
+    }
+    _today="$TODAY"
+  else
+    _today="$(date -I -u)"
+
+  fi
+  # TODO: also check all the env vars we rely on are not empty
+  log "Configuration:"
+  log "  monica_reminder:"
+  log "    DRYRUN: $DRYRUN, TODAY: $TODAY, NOSEND: $NOSEND, LOGDIR: $LOGDIR, LOGROTATEDAY: $LOGROTATEDAY, DATA_HOME: $DATA_HOME"
+  log "  Monica DB:"
+  log "    DB_HOST: $DB_HOST, DB_PASSWORD: ***"
+  log "  Monica MAIL:"
+  log "    MAIL_HOST: $MAIL_HOST, MAIL_PORT: $MAIL_PORT, MAIL_USERNAME: $MAIL_USERNAME, MAIL_FROM_NAME: $MAIL_FROM_NAME, MAIL_FROM_ADDRESS: $MAIL_FROM_ADDRESS, MAIL_PASSWORD: ***"
+
+  if ! type php 1>/dev/null; then
+    log "php is not installed!" ; exit 1
+  fi
+}
+
+execphpsql() {
+  #
+  # Executes sql in $1
+  # Results put into global var 'results'
+  # Logs any errors and terminates
+  #
+  local _sql;_sql=$(cat <<'EOF'
+<?php
+$conn = mysqli_connect(getenv('DB_HOST'), 'homestead', getenv('DB_PASSWORD'), 'monica');
+if (!$conn){
+ die("Connection failed: " . mysqli_connect_error());
+}
+$sql = "
+EOF
+)
+  _sql+="$1"
+  _sql+=$(cat <<'EOF'
+";
+$result = mysqli_query($conn, $sql);
+
+if (mysqli_num_rows($result) > 0){
+  while($row = mysqli_fetch_assoc($result)){
+    echo join("\t", $row)."\n";
+  }
+}
+
+mysqli_close($conn);
+?>
+EOF
+)
+
+  declare -g results
+  results=$(php <(echo "$_sql"))
+  # shellcheck disable=SC2181 #
+  if [[ $? -ne 0 ]]; then
+    log "php-wrapped sql query failed:"
+    log "$_sql"
+    log "---"
+    log "$results"
+    exit 1
+  fi
+}
+
+getusers() {
+  execphpsql "select first_name, email from users;"
+  declare -g users="$results"
+  # TODO: if there's no users log it and quit
+}
+
+getreminders() {
+  # TODO: cope with other types
+  execphpsql "select r.id, r.initial_date, r.title, c.first_name, c.last_name from reminders r join contacts c on r.contact_id = c.id where r.inactive=0 and frequency_type='year'"
+  declare -g reminders="$results"
+  # TODO: if there's no reminders log it and quit
+}
+
+initlogging
+initdatahome
+preflight
+getusers
+getreminders
+
+while IFS=$'\t' read -r id initial_date title first_name last_name ; do
+  # TODO: make cutoff configurable
+  _pastcutoff=2629743  # 1 month epoch seconds
+  log "CONSIDERING reminder id=$id, initial_date=$initial_date title=$title first_name=$first_name last_name=$last_name"
+  _nearestocc=$(nearest_occurence "$_today" "$(date -d "$initial_date" -I)")
+  exit=$? ; [ "$exit" -eq 0 ] || exit 1
+
+  # TODO: get these from DB
+  declare -a _reminderdaysbefore=("0" "7" "30")
+
+  for _daysbefore in "${_reminderdaysbefore[@]}"; do
+    _reminderday=$(( $(date -d "$_nearestocc" +%s) - (_daysbefore*86400) ))
+    _reminderday=$(date -d "@$_reminderday" -I)
+
+    while IFS=$'\t' read -r _emailnice _email ; do
+      # Have we already dealt with this ID, _reminderdate and email-recepient?
+      if [[ -f "$DATA_HOME/${id}_${_reminderday}_${_email}" ]]; then
+        log "skipping - we have processed this ${_daysbefore} day reminder already for ${_email}"
+        continue
+      fi
+
+      if [[ "$_reminderday" = "$_today" ]]; then
+        sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
+        # Mark a file to say we dealt with this reminder
+        [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
+      else
+        true
+        if [[ "$_reminderday" < "$_today" ]]; then
+          if [[ "$_nearestocc" > "$_today" ]]; then
+            # Event still in future
+            log "we should have sent a reminder $_reminderday, sorry!"
+            sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+          else
+            # Event has past, but by how much?
+            _diff=$(( $(date -d "$_today" +%s) - $(date -d "$_nearestocc" +%s) ))
+            if [[ "$_diff" -lt "$_pastcutoff" ]]; then
+              log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
+              sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+              # TODO: potentially we flag that we've now dealt with late reminders for this event
+              # so users only get one late reminder not one for every late reminder
+            else
+              log "event has past more than a month ago, ignore"
+            fi
+          fi
+          # Mark a file to say we dealt with this reminder
+          [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
+        else
+          log "${_daysbefore} day reminder not yet due for ${_email}"
+        fi
+      fi
+
+    done < <(echo "$users")
+  done
+done < <(echo "$reminders")
