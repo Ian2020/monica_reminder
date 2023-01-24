@@ -1,4 +1,4 @@
-# README
+# Monica Reminder
 
 Monica reminder is a BASH script that will takeover the emailing of reminders
 for a Monica instance if you are experiencing problems. It is highly
@@ -12,6 +12,8 @@ moment it has some restrictions but these will be fixed over time:
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
 * Hard-coded to ignore any events older than a month.
 
+## Table of Contents
+
 <!-- vim-markdown-toc GitLab -->
 
 * [Background](#background)
@@ -21,6 +23,7 @@ moment it has some restrictions but these will be fixed over time:
   * [Required Configuration](#required-configuration)
   * [Optional Configuration](#optional-configuration)
 * [How it Works](#how-it-works)
+* [Troubleshooting](#troubleshooting)
 * [Roadmap](#roadmap)
 * [Implementation Notes](#implementation-notes)
 
@@ -30,9 +33,8 @@ moment it has some restrictions but these will be fixed over time:
 
 My own self-hosted Monica instance is wonderful to use but reminders never quite
 seem to work. The authors of Monica are hard at work on a [full rewrite](https://www.monicahq.com/blog/a-new-version-is-coming)
-so a pull request to fix reminders on the current version seems unlikely to
-succeed. Instead I decided to fix it from the outside with a BASH script that
-takes over reminders completely.
+so a pull request seems unlikely to succeed. Instead I decided to fix it from
+the outside with a BASH script that takes over reminders completely.
 
 ## Installation
 
@@ -42,7 +44,7 @@ You should already have a working Monica instance and test emails should work:
 php artisan monica:test-email
 ```
 
-If not start here: [Mail Settings](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
+If not start here: [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
 
 Our instructions assume monica-reminder will run inside the same container as
 Monica. This makes life easy as they share many of the same environment
@@ -60,8 +62,9 @@ apt-get update
 apt-get install -y msmtp
 ```
 
-Install the script into the container from the host. We choose a destination
-that should be a Docker volume so will survive restarts:
+Git clone this repo and install the script into the monica container from the
+host. We choose a destination that should be a Docker volume so will survive
+restarts:
 
 ```bash
 # podman users
@@ -72,7 +75,7 @@ docker cp monica_reminder monica:/var/www/html/storage/monica_reminder
 
 ## Usage
 
-Back inside the container test out the job first:
+Back inside the container let's test out `monica_reminder` for the first time:
 
 ```bash
 LOGDIR=- DRYRUN=true ./monica_reminder
@@ -80,7 +83,7 @@ LOGDIR=- DRYRUN=true ./monica_reminder
 
 `LOGDIR=-` sends logs to stdout and `DRYRUN=true` means no email will be sent
 and no state will be saved. Check if the output looks correct based on the
-reminders you might expect.
+reminders you might expect for your contacts.
 
 Before you start running monica-reminder for real consider that on the first
 run it may send out a lot of emails as it starts from nothing. This might be ok
@@ -91,7 +94,7 @@ catch-up run with emails disabled:
 NOSEND=true ./monica_reminder
 ```
 
-To ensure daily reminders schedule a cron job in the container and
+To ensure you get daily reminders schedule a cron job in the container and
 restart/reload cron. I am using supervisord so can simply kill the `busybox
 cron` process as it will be restarted automatically by supervisord:
 
@@ -101,7 +104,7 @@ echo "0 12 * * * bash /var/www/html/storage/monica_reminder" >> /var/spool/cron/
 pkill busybox
 ```
 
-These steps might appear in a Dockerfile like so:
+To put these installation steps into a Dockerfile you might try this:
 
 ```dockerfile
 RUN set -ex; \
@@ -132,7 +135,9 @@ DB_HOST
 DB_PASSWORD
 ```
 
-For an example see [monica/.env.example](https://github.com/monicahq/monica/blob/main/.env.example)
+For an example see
+[.env.example](https://github.com/monicahq/monica/blob/main/.env.example) in the
+Monica repo.
 
 Monica-reminder needs to send email. The environment variables below are needed.
 Again they should also already be set if you have a working Monica email
@@ -147,7 +152,7 @@ MAIL_FROM_ADDRESS
 MAIL_PASSWORD
 ```
 
-See [monica/mail.md at main · monicahq/monica](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
+See [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
 for how to work with these.
 
 ### Optional Configuration
@@ -202,23 +207,32 @@ Monica-reminder's flow is:
 * For each reminder and each user:
   * Consult our saved state in `DATA_HOME` - if we've already dealt with this
     reminder skip it.
+  * Any reminders due for the future can be ignored.
   * If the event is too far in the past (1 month) mark it as dealt with and
     ignore it.
-  * Any reminders that should have sent before TODAY will now be sent but the
-    subject will be prefixed "[LATE]". They are then marked as dealt with.
-  * Any remaining reminders must be due today so send as normal and mark as
-    dealt with.
+  * Send any reminders that should have sent before TODAY with the subject
+    prefixed with "[LATE]". Mark them as dealt with.
+  * Send any reminder due today and mark them as dealt with.
 
 Monica-reminder relies on its saved state in `DATA_HOME` to remember what is has
 done in the past so as not to repeat itself. This is simple a directory of files
 and can be cleared if needed to reset.
 
-Monica-reminder cannot run correctly without being configured first however and
-that's in the next section.
+## Troubleshooting
+
+Not receiving any email? Ensure this test-email command works first in your
+instance:
+
+```bash
+php artisan monica:test-email
+```
+
+Check monica-reminder's logs at `LOGDIR` (default `/var/www/html/storage/logs`)
+for any issues. If it is running ok it may just be the case that no reminders
+are due right now.
 
 ## Roadmap
 
-* First commit
 * Get tests over it all
 * Simplify installation - container/host mode - given a container name we inject
   and run ourselves. Needs its own preflight to check for podman docker cmd and
