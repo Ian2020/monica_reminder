@@ -102,7 +102,7 @@ LOGDIR=- DRYRUN=true ./monica_reminder
 
 `LOGDIR=-` sends logs to stdout and `DRYRUN=true` means no email will be sent
 and no state will be saved. `CONTAINER` causes monica-reminder to relaunch
-itself inside the named container.
+itself inside the named container via podman or docker.
 
 If you experience errors than look at the configuration section below but if
 Monica is setup correctly than many of the environment variables should already
@@ -128,7 +128,7 @@ TODAY=yesterday NOSEND=true ./monica_reminder
 clearing the backlog before today's run.
 
 Now we're ready. To ensure you get daily reminders schedule a cron job/systemd
-timer on your host to simply run:
+service on your host to simply run:
 
 ```bash
 # Choose:
@@ -136,6 +136,38 @@ timer on your host to simply run:
 CONTAINER=monica ./monica_reminder
 # If running on bare metal:
 ./monica_reminder
+```
+
+Here's an example systemd service unit file `monica_reminder.service`:
+
+```systemd
+[Unit]
+Description=Monica Reminder
+Wants=monica_reminder.timer
+
+[Service]
+Type=oneshot
+StandardOutput=journal
+Environment=CONTAINER=monica
+ExecStart=/bin/env bash -c 'CONTAINER=$CONTAINER monica_reminder'
+
+[Install]
+WantedBy=default.target
+```
+
+...and the corresponding timer file `monica_reminder.time` to fire at 6 a.m. (or
+next nearest possible time):
+
+```systemd
+[Unit]
+Description=Monica Reminder Daily
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=monica_reminder.service
 ```
 
 ## Configuration
@@ -258,11 +290,6 @@ are due right now.
 
 ## Roadmap
 
-* Make properly available for others
-  * DONE: License etc galagos
-  * DONE: Release
-  * DONE: Install with bin
-  * Add suggestions for systemd timers
 * `monica_reminder_data` no longer needs the postfix
 * Eliminate msmtp dep.
   * Install own email hook from within our script.
