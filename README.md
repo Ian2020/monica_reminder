@@ -45,6 +45,8 @@ moment it has some restrictions but these will be fixed over time:
 * [Troubleshooting](#troubleshooting)
 * [Roadmap](#roadmap)
 * [Implementation Notes](#implementation-notes)
+* [Contributing](#contributing)
+* [License](#license)
 
 <!-- vim-markdown-toc -->
 
@@ -249,18 +251,17 @@ are due right now.
 
 ## Roadmap
 
-* Get tests over it all
-* Install it via `bin` and change service so we are not systemd running it as we
-  develop it.
+* Make properly available for others
+  * DONE: License etc galagos
+  * Version and release
+  * Install with bin
+  * Add suggestions for systemd timers
+* `monica_reminder_data` no longer needs the postfix
 * Eliminate msmtp dep.
   * Install own email hook from within our script.
-* `monica_reminder_data` no longer needs the postfix
+* Get tests over it all
 * Change email template to include date of event and link to contact.
   or make it identical to Monica's.
-* Make properly available for others
-  * License etc galagos and version, install with bin
-  * Reference in bugs
-  * Version it - releash?
 * Remove restrictions
   * Respect reminder intervals set per user. Note there seems to be a bug in
     Monica that users share reminder intervals though the DB table hints that
@@ -312,3 +313,31 @@ Can we send email same way monica does? An artisan command we could insert?
 * DONE: Then make full email
 * Install it to `/var/www/html/app/Console/Commands`
 * At this point should we just publish our own container?
+
+## Contributing
+
+It's great that you're interested in contributing. Please ask questions by
+raising an issue and PRs will be considered. For full details see
+[CONTRIBUTING.md](CONTRIBUTING.md)
+
+## License
+
+We declare our licensing by following the REUSE specification - copies of
+applicable licenses are stored in the LICENSES directory. Here is a summary:
+
+* Cource code is licensed under GPL-3.0-or-later.
+* Anything else that is not executable, including the text when extracted from
+  code, is licensed under CC-BY-SA-4.0.
+* Where we use a range of copyright years it is inclusive and shorthand for
+  listing each year individually as a copyrightable year in its own right.
+
+For more accurate information, check individual files.
+
+monica-reminder is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
