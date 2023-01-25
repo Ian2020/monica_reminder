@@ -24,6 +24,82 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
+monicaremindersendphp=$(cat << "EOF"
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Mail;
+
+class MonicaReminderSend extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'monica:monica-reminder-send
+                            {--email= : The email address to send to}
+                            {--subject= : The email subject}
+                            {--body= : The email body to send}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Send a monica_reminder email';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle()
+    {
+        // retrieve the email from the option
+        $email = $this->option('email');
+        $subject = $this->option('subject');
+        $body = $this->option('body');
+
+        if (! $email) {
+            $email = $this->ask('What email address should I send the email to?');
+        }
+
+        // Validate user provided email address
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            $this->error('Invalid email address: "'.$email.'".');
+
+            return -1;
+        }
+
+        if (! $subject) {
+            $subject = $this->ask('What subject should I use for the email?');
+        }
+        if (! $body) {
+            $body = $this->ask('What email body should I send?');
+        }
+
+        $this->info('Preparing and sending email to "'.$email.'"');
+
+        // immediately deliver the test email (bypassing the queue)
+        Mail::raw(
+            $body,
+            function ($message) use ($email, $subject) {
+                $message->to($email)
+                    ->subject($subject);
+            }
+        );
+
+        $this->info('Email sent!');
+
+        return 0;
+    }
+}
+EOF
+)
+
 relaunchincontainer() {
   if command -v podman > /dev/null 2>&1; then conmgr=podman;
   elif command -v docker > /dev/null 2>&1; then conmgr=docker;
@@ -52,22 +128,20 @@ initdatahome() {
 }
 
 sendsmtp() {
-  # [msmtp](https://marlam.de/msmtp/msmtp.html)
-  local _mailto;_mailto="$1";shift
-  local _mail;_mail="$1";shift
+  local _email;_email="$1";shift
+  local _subject;_subject="$1";shift
+  local _body;_body="$1";shift
   local _maillog;
 
   [ "$NOSEND" == "true" ] ||
-  _maillog=$(msmtp --host="$MAIL_HOST" --port="$MAIL_PORT" \
-        --auth=on --user="$MAIL_USERNAME" \
-        --tls=on --tls-starttls=off \
-        --from="$MAIL_FROM_ADDRESS" \
-        --passwordeval="echo $MAIL_PASSWORD" \
-        "$_mailto" 2>&1 < <(echo -e "$_mail")) || {
-        log "mailing failed"
-        log "$_maillog"
-        exit 1
-      }
+  _maillog=$(php artisan monica:monica-reminder-send \
+               --email="$_email" \
+               --subject="$_subject" \
+               --body="$_body") || {
+    log "mailing failed"
+    log "$_maillog"
+    exit 1
+  }
 }
 
 sendmail() {
@@ -90,11 +164,8 @@ sendmail() {
     _subjectPrefix+="$_nthday day reminder"
     _bodyprefix="It's exactly $_nthday days until"
   fi
-  local _message="\
-From: $MAIL_FROM_NAME <$MAIL_FROM_ADDRESS>
-To: $_email
-Subject: $_subjectPrefix regarding $_contact - $_title
-
+  local _subject="$_subjectPrefix regarding $_contact - $_title"
+  local _body="\
 Dear $_emailnice,
 
 $_bodyprefix \"$_title\" for $_contact.
@@ -104,9 +175,10 @@ You asked me to let you know. Now you know!
 Monica xoxo
 "
   log "Send following message to: $_email"
-  log "$_message"
+  log "Subject: $_subject"
+  log "$_body"
 
-  [ "$DRYRUN" == "true" ] || sendsmtp "$_email" "$_message"
+  [ "$DRYRUN" == "true" ] || sendsmtp "$_email" "$_subject" "$_body"
 }
 
 nearest_occurence() {
@@ -183,19 +255,30 @@ preflight() {
   else
     today="$(date -I -u)"
 
+  MONICABASEDIR=${MONICABASEDIR:-.}
+  monicabasedircmds=$MONICABASEDIR/app/Console/Commands 
+  if [[ ! -d "$monicabasedircmds" ]]; then
+    log "Could not find monica command dir at $monicabasedircmds. Check MONICABASEDIR configured correctly."
+    exit 1
+  fi
+
   fi
   # TODO: also check all the env vars we rely on are not empty
   log "Configuration:"
   log "  monica_reminder:"
-  log "    DRYRUN: $DRYRUN, TODAY: $TODAY, NOSEND: $NOSEND, LOGDIR: $LOGDIR, LOGROTATEDAY: $LOGROTATEDAY, DATA_HOME: $DATA_HOME"
+  log "    DRYRUN: $DRYRUN, TODAY: $TODAY, NOSEND: $NOSEND, LOGDIR: $LOGDIR, LOGROTATEDAY: $LOGROTATEDAY, DATA_HOME: $DATA_HOME, MONICABASEDIR: $MONICABASEDIR"
   log "  Monica DB:"
   log "    DB_HOST: $DB_HOST, DB_PASSWORD: ***"
-  log "  Monica MAIL:"
-  log "    MAIL_HOST: $MAIL_HOST, MAIL_PORT: $MAIL_PORT, MAIL_USERNAME: $MAIL_USERNAME, MAIL_FROM_NAME: $MAIL_FROM_NAME, MAIL_FROM_ADDRESS: $MAIL_FROM_ADDRESS, MAIL_PASSWORD: ***"
 
   if ! type php 1>/dev/null; then
     log "php is not installed!" ; exit 1
   fi
+}
+
+installemailcmd() {
+  echo "$monicaremindersendphp" > "$monicabasedircmds/MonicaReminderSend.php" || {
+    log "Failed to install email command at $monicabasedircmds" ; exit 1
+  }
 }
 
 execphpsql() {
@@ -261,6 +344,7 @@ fi
 initlogging
 initdatahome
 preflight
+installemailcmd
 getusers
 getreminders
 

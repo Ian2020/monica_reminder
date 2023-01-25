@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+* Our dependency on `msmtp` is no longer needed. Now we use Monica's own
+  mechanism to send email. This means no need to change your Monica
+  system/container at all simplify installation.
+
 ## [0.0.1 - 2023-01-25](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.1)
 
 ### Added

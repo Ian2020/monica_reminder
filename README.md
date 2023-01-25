@@ -60,15 +60,17 @@ the outside with a BASH script that takes over reminders completely.
 
 ## Installation
 
+Install monica-reminder on your Monica host if running on bare metal/VM. If
+Monica is running in a container install it on the container host.
+
 To install with [bin](https://github.com/marcosnils/bin):
 
 ```bash
 bin install https://github.com/Ian2020/monica_reminder
 ```
 
-To install manually git clone this repo on your Monica host (the host outside of
-your container if containerised). Optionally copy `monica_reminder` to a dir on
-your PATH, e.g. `/usr/local/bin`.
+To install manually git clone this repo. Optionally copy `monica_reminder` to a
+dir on your PATH, e.g. `/usr/local/bin`.
 
 Next install `msmtp` in your Monica environment to allow monica-reminder to send
 emails. If monica is containerised this can be done temporarily by running a
@@ -94,10 +96,16 @@ First let's test `monica_reminder` - don't worry this won't save or send any
 emails:
 
 ```bash
+#
 # Choose:
+#
 # If Monica is running in a container called 'monica':
+#
 CONTAINER=monica LOGDIR=- DRYRUN=true ./monica_reminder
-# If running on bare metal:
+#
+# Or if running on bare metal:
+#
+cd [MONICA BASE DIR e.g. /var/www/html]
 LOGDIR=- DRYRUN=true ./monica_reminder
 ```
 
@@ -106,8 +114,7 @@ and no state will be saved. `CONTAINER` causes monica-reminder to relaunch
 itself inside the named container via podman or docker.
 
 If you experience errors than look at the configuration section below but if
-Monica is setup correctly than many of the environment variables should already
-be present.
+Monica is setup correctly than much of the configuration will default ok.
 
 Check if the output looks correct based on the reminders you might expect for
 your contacts. If it's all ok you're almost ready to run monica-reminder
@@ -118,10 +125,15 @@ as it starts from nothing. This might be ok but if you don't want to bombard
 your users you can instead do a one-off catch-up with emails disabled:
 
 ```bash
+#
 # Choose:
+#
 # If Monica is running in a container called 'monica':
+#
 CONTAINER=monica TODAY=yesterday NOSEND=true ./monica_reminder
-# If running on bare metal:
+#
+# Or if running on bare metal:
+#
 TODAY=yesterday NOSEND=true ./monica_reminder
 ```
 
@@ -132,10 +144,15 @@ Now we're ready. To ensure you get daily reminders schedule a cron job/systemd
 service on your host to simply run:
 
 ```bash
+#
 # Choose:
+#
 # If Monica is running in a container called 'monica':
+#
 CONTAINER=monica ./monica_reminder
-# If running on bare metal:
+#
+# Or if running on bare metal:
+#
 ./monica_reminder
 ```
 
@@ -191,22 +208,6 @@ For an example see
 [.env.example](https://github.com/monicahq/monica/blob/main/.env.example) in the
 Monica repo.
 
-Monica-reminder needs to send email. The environment variables below are needed
-and are the same that Monica itself uses. So if you have a working Monica email
-configuration you should already be good to go:
-
-```bash
-MAIL_HOST
-MAIL_PORT
-MAIL_USERNAME
-MAIL_FROM_NAME
-MAIL_FROM_ADDRESS
-MAIL_PASSWORD
-```
-
-See [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
-for what each one does.
-
 ### Optional Configuration
 
 There are several options set through further environment variables that control
@@ -220,6 +221,7 @@ NOSEND
 LOGDIR
 LOGROTATEDAY
 DATA_HOME
+MONICABASEDIR
 ```
 
 **CONTAINER=NAME** Instead of running on the host relaunch monica-reminder
@@ -256,6 +258,13 @@ container. It will create a dir inside this dir called `monica_reminder`
 and simply touch a file for each reminder, user and reminder date it has seen.
 This prevents monica-reminder repeating itself.
 
+**MONICABASEDIR=/PATH** Path to the Monica install, the default is the current
+working dir. This should be correct for running monica-reminder in your monica
+container. If running on bare metal/VM you could switch to the correct dir
+before running monica-reminder instead of setting this var. The correct path is
+`/var/www/html` in the standard container or whereever the `artisan` file is
+located.
+
 ## How it Works
 
 Monica-reminder's flow is:
@@ -291,8 +300,6 @@ are due right now.
 
 ## Roadmap
 
-* Eliminate msmtp dep.
-  * Install own email hook from within our script.
 * Change email template to include date of event and link to contact.
   or make it identical to Monica's.
 * Cleanup old data files, anything older than a year potentially. So data dir
@@ -331,16 +338,6 @@ Can we insert the cron job via a bind mount?
   command - or even `monica_reminder` does all this, copying
   itself into container, with its email command and then setting itself
   off? That's best.
-
-Can we send email same way monica does? An artisan command we could insert?
-
-* Here is there command:
-  [monica/SendTestEmail.php at a5ff8fc247197c1ac2de2a17f75f0ebf1275c243 · monicahq/monica](https://github.com/monicahq/monica/blob/a5ff8fc247197c1ac2de2a17f75f0ebf1275c243/app/Console/Commands/SendTestEmail.php)
-* Could we monkey-patch our own email command?
-* DONE: Try creating own simple command to start, just echo
-* DONE: Then make full email
-* Install it to `/var/www/html/app/Console/Commands`
-* At this point should we just publish our own container?
 
 ## Contributing
 
