@@ -1,5 +1,20 @@
 #! /bin/bash
 
+relaunchincontainer() {
+  if command -v podman > /dev/null 2>&1; then conmgr=podman;
+  elif command -v docker > /dev/null 2>&1; then conmgr=docker;
+  else echo "monica_reminder: neither podman nor docker installed!";exit 1; fi
+
+  "$conmgr" cp "$0" "$CONTAINER:/usr/local/bin/monica_reminder" || {
+    rc=$? ; echo "monica_reminder: failed to insert ourselves into container $CONTAINER" ; exit "$rc"
+  }
+  "$conmgr" exec -e=DRYRUN -e=TODAY -e=NOSEND -e=LOGDIR -e=LOGROTATEDAY -e=DATA_HOME \
+    "$CONTAINER" monica_reminder || {
+    rc=$? ; echo "monica_reminder: failed to execute inside container $CONTAINER" ; exit "$rc"
+  }
+  exit 0
+}
+
 initdatahome() {
   DATA_HOME=${DATA_HOME:-"/var/www/html/storage"}/$(basename "$0")_data
   if [[ ! -d "$DATA_HOME" ]]; then
@@ -137,13 +152,12 @@ log() {
 
 preflight() {
   if [[ -v TODAY ]]; then
-    date -d "$TODAY" > /dev/null || {
+    today=$(date -d "$TODAY" -I -u) > /dev/null || {
       log "TODAY was invalid date: $TODAY"
       exit 1
     }
-    _today="$TODAY"
   else
-    _today="$(date -I -u)"
+    today="$(date -I -u)"
 
   fi
   # TODO: also check all the env vars we rely on are not empty
@@ -216,6 +230,10 @@ getreminders() {
   # TODO: if there's no reminders log it and quit
 }
 
+if [[ -v CONTAINER ]]; then
+  relaunchincontainer
+fi
+
 initlogging
 initdatahome
 preflight
@@ -226,7 +244,7 @@ while IFS=$'\t' read -r id initial_date title first_name last_name ; do
   # TODO: make cutoff configurable
   _pastcutoff=2629743  # 1 month epoch seconds
   log "CONSIDERING reminder id=$id, initial_date=$initial_date title=$title first_name=$first_name last_name=$last_name"
-  _nearestocc=$(nearest_occurence "$_today" "$(date -d "$initial_date" -I)")
+  _nearestocc=$(nearest_occurence "$today" "$(date -d "$initial_date" -I)")
   exit=$? ; [ "$exit" -eq 0 ] || exit 1
 
   # TODO: get these from DB
@@ -243,20 +261,20 @@ while IFS=$'\t' read -r id initial_date title first_name last_name ; do
         continue
       fi
 
-      if [[ "$_reminderday" = "$_today" ]]; then
+      if [[ "$_reminderday" = "$today" ]]; then
         sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
         # Mark a file to say we dealt with this reminder
         [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
       else
         true
-        if [[ "$_reminderday" < "$_today" ]]; then
-          if [[ "$_nearestocc" > "$_today" ]]; then
+        if [[ "$_reminderday" < "$today" ]]; then
+          if [[ "$_nearestocc" > "$today" ]]; then
             # Event still in future
             log "we should have sent a reminder $_reminderday, sorry!"
             sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
           else
             # Event has past, but by how much?
-            _diff=$(( $(date -d "$_today" +%s) - $(date -d "$_nearestocc" +%s) ))
+            _diff=$(( $(date -d "$today" +%s) - $(date -d "$_nearestocc" +%s) ))
             if [[ "$_diff" -lt "$_pastcutoff" ]]; then
               log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
               sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"

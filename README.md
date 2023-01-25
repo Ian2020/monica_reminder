@@ -1,8 +1,8 @@
 # Monica Reminder
 
 Monica reminder is a BASH script that will takeover the emailing of reminders
-for a Monica instance if you are experiencing problems. It is highly
-configurable and logs all its decisions.
+for a [Monica](https://www.monicahq.com/) instance if you are experiencing
+problems. It is highly configurable and logs all its decisions.
 
 It expects to be run at least daily however it can recover from multiple days of
 downtime and will email any missed reminders, marking them as "[LATE]". At the
@@ -11,6 +11,8 @@ moment it has some restrictions but these will be fixed over time:
 * Only handles yearly reminders.
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
 * Hard-coded to ignore any events older than a month.
+* Doesn't disable Monica's own reminder mechanism, so some duplicates may be
+  received.
 
 ## Table of Contents
 
@@ -38,7 +40,8 @@ the outside with a BASH script that takes over reminders completely.
 
 ## Installation
 
-You should already have a working Monica instance and test emails should work:
+You should already have a working Monica instance and test emails should work
+i.e. this command run on your Monica host results in you receiving an email:
 
 ```bash
 php artisan monica:test-email
@@ -46,77 +49,67 @@ php artisan monica:test-email
 
 If not start here: [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
 
-Our instructions assume monica-reminder will run inside the same container as
-Monica. This makes life easy as they share many of the same environment
-variables for configuration. It can also be run from outside a container but
-you'd need to setup more configuration yourself.
-
-At present we have to modify the container to install monica-reminder.
-This can be done by running a shell inside the container for testing but
-longer-term should be put into a Dockerfile so it survives restart.
-
-We use `msmtp` for emailing. Inside the container:
+Next install `msmtp` in your Monica environment to allow monica-reminder to send
+emails. If monica is containerised this can be done temporarily by running a
+shell inside the container but make sure it ends up in your Dockerfile to
+survive restarts:
 
 ```bash
-apt-get update
-apt-get install -y msmtp
+apt-get update ; apt-get install -y msmtp
 ```
 
-Git clone this repo and install the script into the monica container from the
-host. We choose a destination that should be a Docker volume so will survive
-restarts:
-
-```bash
-# podman users
-podman cp monica_reminder monica:/var/www/html/storage/monica_reminder
-# docker users
-docker cp monica_reminder monica:/var/www/html/storage/monica_reminder
-```
+Now git clone this repo on your Monica host (the host outside of your container
+if containerised).
 
 ## Usage
 
-Back inside the container let's test out `monica_reminder` for the first time:
+First let's test `monica_reminder` - don't worry this won't save or send any
+emails:
 
 ```bash
+# Choose:
+# If Monica is running in a container called 'monica':
+CONTAINER=monica LOGDIR=- DRYRUN=true ./monica_reminder
+# If running on bare metal:
 LOGDIR=- DRYRUN=true ./monica_reminder
 ```
 
 `LOGDIR=-` sends logs to stdout and `DRYRUN=true` means no email will be sent
-and no state will be saved. Check if the output looks correct based on the
-reminders you might expect for your contacts.
+and no state will be saved. `CONTAINER` causes monica-reminder to relaunch
+itself inside the named container.
 
-Before you start running monica-reminder for real consider that on the first
-run it may send out a lot of emails as it starts from nothing. This might be ok
-but if you don't want to bombard your users you can instead do a one-off
-catch-up run with emails disabled:
+If you experience errors than look at the configuration section below but if
+Monica is setup correctly than many of the environment variables should already
+be present.
+
+Check if the output looks correct based on the reminders you might expect for
+your contacts. If it's all ok you're almost ready to run monica-reminder
+regularly.
+
+The final consideration is that on the first run it may send out a lot of emails
+as it starts from nothing. This might be ok but if you don't want to bombard
+your users you can instead do a one-off catch-up with emails disabled:
 
 ```bash
-NOSEND=true ./monica_reminder
+# Choose:
+# If Monica is running in a container called 'monica':
+CONTAINER=monica TODAY=yesterday NOSEND=true ./monica_reminder
+# If running on bare metal:
+TODAY=yesterday NOSEND=true ./monica_reminder
 ```
 
-To ensure you get daily reminders schedule a cron job in the container and
-restart/reload cron. I am using supervisord so can simply kill the `busybox
-cron` process as it will be restarted automatically by supervisord:
+`TODAY=yesterday` tells monica-reminder to work as if it was running yesterday, thus
+clearing the backlog before today's run.
+
+Now we're ready. To ensure you get daily reminders schedule a cron job/systemd
+timer on your host to simply run:
 
 ```bash
-# e.g. 12:00 every day
-echo "0 12 * * * bash /var/www/html/storage/monica_reminder" >> /var/spool/cron/crontabs/www-data
-pkill busybox
-```
-
-To put these installation steps into a Dockerfile you might try this:
-
-```dockerfile
-RUN set -ex; \
-    \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        supervisor \
-        msmtp \
-    ; \
-    rm -rf /var/lib/apt/lists/*
-
-RUN echo "0 12 * * * bash /var/www/html/storage/monica_reminder" >> /var/spool/cron/crontabs/www-data
+# Choose:
+# If Monica is running in a container called 'monica':
+CONTAINER=monica ./monica_reminder
+# If running on bare metal:
+./monica_reminder
 ```
 
 ## Configuration
@@ -128,7 +121,7 @@ testing and doing dry runs etc.
 ### Required Configuration
 
 Monica-reminder needs to reach the Monica database. These environment variables
-are the same ones Monica uses so should already be set up:
+are the same ones Monica uses so should already be set up on your monica host:
 
 ```bash
 DB_HOST
@@ -139,9 +132,9 @@ For an example see
 [.env.example](https://github.com/monicahq/monica/blob/main/.env.example) in the
 Monica repo.
 
-Monica-reminder needs to send email. The environment variables below are needed.
-Again they should also already be set if you have a working Monica email
-configuration:
+Monica-reminder needs to send email. The environment variables below are needed
+and are the same that Monica itself uses. So if you have a working Monica email
+configuration you should already be good to go:
 
 ```bash
 MAIL_HOST
@@ -153,7 +146,7 @@ MAIL_PASSWORD
 ```
 
 See [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
-for how to work with these.
+for what each one does.
 
 ### Optional Configuration
 
@@ -161,6 +154,7 @@ There are several options set through further environment variables that control
 execution of monica-reminder:
 
 ```bash
+CONTAINER
 DRYRUN
 TODAY
 NOSEND
@@ -168,6 +162,10 @@ LOGDIR
 LOGROTATEDAY
 DATA_HOME
 ```
+
+**CONTAINER=NAME** Instead of running on the host relaunch monica-reminder
+inside the named container. Any other configuration environment variables will
+be passed through to the container process.
 
 **DRYRUN=true|false** If true then don't send any email, don't write any state
 (default=false). This is to allow a user to see what will happen without
@@ -187,16 +185,17 @@ receive a lot of emails for events that have just passed.
 
 **LOGDIR=/PATH|-** Set a path for where monica-reminder should log or to use
 stdout use `-`. Default is `/var/www/html/storage/logs` which is correct for
-Docker instances. Monica-reminder will create a log file for each run postfixed
-with a timestamp.
+the official Docker container. Monica-reminder will create a log file for each
+run postfixed with a timestamp.
 
 **LOGROTATEDAY=10** Monica-reminder will rotate its own logs deleting those
 older than the number of days specified here. Default is 10 days.
 
-**DATA_HOME=/PATH** Base path for monica-reminder to save its state
-(default=`/var/www/html/storage`). It will create a dir inside this dir
-called `monica_reminder_data` and simply touch a file for each reminder, user
-and reminder date it has seen. This prevents monica-reminder repeating itself.
+**DATA_HOME=/PATH** Base path for monica-reminder to save its state.
+The default is `/var/www/html/storage` which is correct for the official Docker
+container. It will create a dir inside this dir called `monica_reminder_data`
+and simply touch a file for each reminder, user and reminder date it has seen.
+This prevents monica-reminder repeating itself.
 
 ## How it Works
 
@@ -215,7 +214,7 @@ Monica-reminder's flow is:
   * Send any reminder due today and mark them as dealt with.
 
 Monica-reminder relies on its saved state in `DATA_HOME` to remember what is has
-done in the past so as not to repeat itself. This is simple a directory of files
+done in the past so as not to repeat itself. This is simply a directory of files
 and can be cleared if needed to reset.
 
 ## Troubleshooting
@@ -227,18 +226,18 @@ instance:
 php artisan monica:test-email
 ```
 
-Check monica-reminder's logs at `LOGDIR` (default `/var/www/html/storage/logs`)
+Next check monica-reminder's logs at `LOGDIR` (default `/var/www/html/storage/logs`)
 for any issues. If it is running ok it may just be the case that no reminders
 are due right now.
 
 ## Roadmap
 
 * Get tests over it all
-* Simplify installation - container/host mode - given a container name we inject
-  and run ourselves. Needs its own preflight to check for podman docker cmd and
-  container is running/avail.
-  * Removes need to alter container so users can run Monica straight from source
-  * Allows us to also use laravel emailing
+* Install it via `bin` and change service so we are not systemd running it as we
+  develop it.
+* Eliminate msmtp dep.
+  * Install own email hook from within our script.
+* `monica_reminder_data` no longer needs the postfix
 * Change email template to include date of event and link to contact.
   or make it identical to Monica's.
 * Make properly available for others
@@ -252,6 +251,8 @@ are due right now.
   * Cope with one-offs properly
   * Other reminder frequencies: N week, month and year
   * Allow cutoff to be configurable
+* Cleanup old data files, anything older than a year potentially. So data dir
+  does not grow forever.
 * Support other/all mailer methods as Monica does if not already done
   * We force TLS currently, support use of `START_TLS`. Check value of
     `MAIL_ENCRYPTION`. `ssl` means TLS and `tls` means STARTTLS confusingly.
