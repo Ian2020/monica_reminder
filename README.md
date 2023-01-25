@@ -59,14 +59,15 @@ the outside with a BASH script that takes over reminders completely.
 
 ## Installation
 
-You should already have a working Monica instance and test emails should work
-i.e. this command run on your Monica host results in you receiving an email:
+To install with [bin](https://github.com/marcosnils/bin):
 
 ```bash
-php artisan monica:test-email
+bin install https://github.com/Ian2020/monica_reminder
 ```
 
-If not start here: [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
+To install manually git clone this repo on your Monica host (the host outside of
+your container if containerised). Optionally copy `monica_reminder` to a dir on
+your PATH, e.g. `/usr/local/bin`.
 
 Next install `msmtp` in your Monica environment to allow monica-reminder to send
 emails. If monica is containerised this can be done temporarily by running a
@@ -77,10 +78,16 @@ survive restarts:
 apt-get update ; apt-get install -y msmtp
 ```
 
-Now git clone this repo on your Monica host (the host outside of your container
-if containerised).
-
 ## Usage
+
+You should already have a working Monica instance and test emails should work
+i.e. this command run on your Monica host results in you receiving an email:
+
+```bash
+php artisan monica:test-email
+```
+
+If not start here: [mail settings (Monica docs)](https://github.com/monicahq/monica/blob/main/docs/installation/mail.md)
 
 First let's test `monica_reminder` - don't worry this won't save or send any
 emails:
@@ -253,31 +260,25 @@ are due right now.
 
 * Make properly available for others
   * DONE: License etc galagos
-  * Version and release
-  * Install with bin
+  * DONE: Release
+  * DONE: Install with bin
   * Add suggestions for systemd timers
 * `monica_reminder_data` no longer needs the postfix
 * Eliminate msmtp dep.
   * Install own email hook from within our script.
-* Get tests over it all
 * Change email template to include date of event and link to contact.
   or make it identical to Monica's.
-* Remove restrictions
+* Cleanup old data files, anything older than a year potentially. So data dir
+  does not grow forever.
+* Get tests over it all
+* Remove restrictions and pain points:
   * Respect reminder intervals set per user. Note there seems to be a bug in
     Monica that users share reminder intervals though the DB table hints that
     they can be set per user(?)
   * Cope with one-offs properly
   * Other reminder frequencies: N week, month and year
   * Allow cutoff to be configurable
-* Cleanup old data files, anything older than a year potentially. So data dir
-  does not grow forever.
-* Support other/all mailer methods as Monica does if not already done
-  * We force TLS currently, support use of `START_TLS`. Check value of
-    `MAIL_ENCRYPTION`. `ssl` means TLS and `tls` means STARTTLS confusingly.
-    [laravel - How do I use STARTTLS with swiftmailer in php? - Stack Overflow](https://stackoverflow.com/questions/62577544/how-do-i-use-starttls-with-swiftmailer-in-php)
-    So we'd need to switch on this env. var and feed it through to msmtp
-  * This is intricate. It's handing off to Laravel's mailing facility and config
-    so we would end up mimicking Laravel.
+  * Disable Monica's own reminder handling
 
 ## Implementation Notes
 
@@ -325,7 +326,7 @@ raising an issue and PRs will be considered. For full details see
 We declare our licensing by following the REUSE specification - copies of
 applicable licenses are stored in the LICENSES directory. Here is a summary:
 
-* Cource code is licensed under GPL-3.0-or-later.
+* Source code is licensed under GPL-3.0-or-later.
 * Anything else that is not executable, including the text when extracted from
   code, is licensed under CC-BY-SA-4.0.
 * Where we use a range of copyright years it is inclusive and shorthand for

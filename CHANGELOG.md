@@ -23,3 +23,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+* Instructions on installing with bin
+
+## [0.0.0 - 2023-01-25](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.0)
+
+### Added
+
+* Basic functionality complete.
+* We support installation via [bin](https://github.com/marcosnils/bin) due to
+  this GitHub release.

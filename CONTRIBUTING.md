@@ -17,7 +17,22 @@ Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
 # Contributing
 
-Feedback and contribution are very welcome!
+Feedback and contribution are welcome.
+
+## Table of Contents
+
+<!-- vim-markdown-toc GitLab -->
+
+* [General Information](#general-information)
+* [Contributions](#contributions)
+  * [Developer Certificate of Origin (DCO)](#developer-certificate-of-origin-dco)
+  * [License](#license)
+  * [Code Changes](#code-changes)
+  * [Releasing](#releasing)
+* [Vulnerability Reporting or Security Issues](#vulnerability-reporting-or-security-issues)
+* [Attribution](#attribution)
+
+<!-- vim-markdown-toc -->
 
 ## General Information
 
@@ -128,6 +143,13 @@ executed, is also released under the [Creative Commons Attribution ShareAlike
 * When reusing components they MUST have a license compatible with the license of
   this software.
 * Test coverage is required except in case of trivial changes
+
+### Releasing
+
+This is a stub for now.
+
+* Include `monica_reminder` as a release asset so that it can be installed
+  by [bin](https://github.com/marcosnils/bin).
 
 ## Vulnerability Reporting or Security Issues
 
