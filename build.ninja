@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2023 Ian2020 <https://github.com/Ian2020>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Monica reminder is a BASH script that will takeover the emailing of reminders for a Monica instance if you are experiencing problems.
+#
+# For full copyright information see the AUTHORS file at the top-level
+# directory of this distribution or at
+# [AUTHORS](https://github.com/Ian2020/monica_reminder/AUTHORS.md)
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
+
+include build_config.ninja
+include galagos/build.ninja
+
+build build: phony
+build test: phony $
+  galagos_compliance
+default test
+build update: phony $
+  galagos_update
+build deploy: phony
+
+# Helper Targets
+
+build _addheaders: phony $
+                   _addheaders_cc-by-sa_html $
+                   _addheaders_cc-by-sa_html_explicit $
+                   _addheaders_cc-by-sa_python $
+                   _addheaders_gpl3_python
+
+build _addheaders_cc-by-sa_html: galagos_addheader $
+                                 AUTHORS.md $
+                                 CHANGELOG.md $
+                                 CONTRIBUTING.md $
+                                 README.md
+  galagos_license=CC-BY-SA-4.0
+  galagos_style=html
+
+build _addheaders_cc-by-sa_html_explicit: galagos_addheader $
+                                         .copier-answers.yml
+  galagos_license=CC-BY-SA-4.0
+  galagos_style=html
+  galagos_reuse_explicit_switch=--explicit-license
+
+build _addheaders_cc-by-sa_python: galagos_addheader $
+                                    .gitignore
+  galagos_license=CC-BY-SA-4.0
+  galagos_style=python
+
+build _addheaders_gpl3_python: galagos_addheader $
+                               build.ninja $
+                               monica_reminder $
+                               galagos/build.ninja
+  galagos_license=GPL-3.0-or-later
+  galagos_style=python

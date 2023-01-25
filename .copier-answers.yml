@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier
+_commit: v1.0.0
+_src_path: git@gitlab.com:thegalagic/galagos
+build_dir: /home/ian/.var/build/github.com/monica_reminder
+copyright_statement: Ian2020 <https://github.com/Ian2020>
+copyright_years: '2023'
+project_desc: Monica reminder is a BASH script that will takeover the emailing of
+    reminders for a Monica instance if you are experiencing problems.
+project_name: monica_reminder
+repo_url: https://github.com/Ian2020/monica_reminder
