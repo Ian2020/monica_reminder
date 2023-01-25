@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Reminder emails now include the date of the event in the body.
+
 ### Removed
 
 * Our dependency on `msmtp` is no longer needed. Now we use Monica's own

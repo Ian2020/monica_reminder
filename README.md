@@ -94,7 +94,7 @@ emails:
 #
 CONTAINER=monica LOGDIR=- DRYRUN=true monica_reminder
 #
-# Or if running on bare metal:
+# Or if running on bare metal/VM:
 #
 cd [MONICA BASE DIR e.g. /var/www/html]
 LOGDIR=- DRYRUN=true monica_reminder
@@ -123,7 +123,7 @@ your users you can instead do a one-off catch-up with emails disabled:
 #
 CONTAINER=monica TODAY=yesterday NOSEND=true monica_reminder
 #
-# Or if running on bare metal:
+# Or if running on bare metal/VM:
 #
 TODAY=yesterday NOSEND=true monica_reminder
 ```
@@ -142,7 +142,7 @@ service on your host to simply run:
 #
 CONTAINER=monica monica_reminder
 #
-# Or if running on bare metal:
+# Or if running on bare metal/VM:
 #
 monica_reminder
 ```
@@ -291,8 +291,6 @@ are due right now.
 
 ## Roadmap
 
-* Change email template to include date of event and link to contact.
-  or make it identical to Monica's.
 * Cleanup old data files, anything older than a year potentially. So data dir
   does not grow forever.
 * Get tests over it all
@@ -304,6 +302,8 @@ are due right now.
   * Other reminder frequencies: N week, month and year
   * Allow cutoff to be configurable
   * Disable Monica's own reminder handling
+* Change email template to include a link to contact. The link is not available
+  from the database, it appears to be a route calculated inside Monica unf.
 
 ## Implementation Notes
 

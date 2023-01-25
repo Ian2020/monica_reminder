@@ -145,6 +145,7 @@ sendsmtp() {
 }
 
 sendmail() {
+  local  _initialdate;_initialdate="$1";shift  # initial date YYYY-MM-DD
   local  _email;_email="$1";shift  # email address
   local  _emailnice;_emailnice="$1";shift  # preferred name for recipient
   local -i _nthday;_nthday="$1";shift # This is nth day reminder (can be 0)
@@ -152,23 +153,29 @@ sendmail() {
   local _title;_title="$1";shift # Title of the reminder
   local _late;_late="$1";shift # Is this reminder late? true/false
 
-  local _subjectPrefix=""
+  # Convert date to human-readable
+  _initialdate=$(date -d "$_initialdate" +"%a %-d %b")
+  local _bodyprefix
+  local _bodypostfix
+  local _subjectprefix=""
   if [[ "$_late" = "true" ]]; then
-    _subjectPrefix="[LATE] "
+    _subjectprefix="[LATE] "
   fi
 
   if [[ "$_nthday" -eq 0 ]]; then
-    _subjectPrefix+="It's today! Reminder"
-    _bodyprefix="It's today! Here's your reminder for"
+    _subjectprefix+="It's today! Reminder"
+    _bodyprefix="It's today! Here's your reminder"
+    _bodypostfix="$_contact"
   else
-    _subjectPrefix+="$_nthday day reminder"
-    _bodyprefix="It's exactly $_nthday days until"
+    _subjectprefix+="$_nthday day reminder"
+    _bodyprefix="It's exactly $_nthday days until the anniversary of"
+    _bodypostfix="$_contact on $_initialdate"
   fi
-  local _subject="$_subjectPrefix regarding $_contact - $_title"
+  local _subject="$_subjectprefix regarding $_contact - $_title"
   local _body="\
 Dear $_emailnice,
 
-$_bodyprefix \"$_title\" for $_contact.
+$_bodyprefix \"$_title\" for $_bodypostfix.
 
 You asked me to let you know. Now you know!
 
@@ -370,7 +377,7 @@ while IFS=$'\t' read -r id initial_date title first_name last_name ; do
       fi
 
       if [[ "$_reminderday" = "$today" ]]; then
-        sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
+        sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
         # Mark a file to say we dealt with this reminder
         [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
       else
@@ -379,13 +386,13 @@ while IFS=$'\t' read -r id initial_date title first_name last_name ; do
           if [[ "$_nearestocc" > "$today" ]]; then
             # Event still in future
             log "we should have sent a reminder $_reminderday, sorry!"
-            sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+            sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
           else
             # Event has past, but by how much?
             _diff=$(( $(date -d "$today" +%s) - $(date -d "$_nearestocc" +%s) ))
             if [[ "$_diff" -lt "$_pastcutoff" ]]; then
               log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
-              sendmail "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+              sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
               # TODO: potentially we flag that we've now dealt with late reminders for this event
               # so users only get one late reminder not one for every late reminder
             else
