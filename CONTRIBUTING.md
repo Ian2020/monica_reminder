@@ -190,6 +190,8 @@ prepended with a `v`, e.g. `v1.0.0`.
 
 * Create a GitHub release - for now we're doing this through the website.
   * Select the tag you just pushed
+  * Title: `monica_reminder <VERSION>`
+  * Take release notes straight from the CHANGELOG
   * Include `monica_reminder` as a release asset so that it can be installed
     by [bin](https://github.com/marcosnils/bin).
 
