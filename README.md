@@ -251,7 +251,7 @@ older than the number of days specified here. Default is 10 days.
 
 **DATA_HOME=/PATH** Base path for monica-reminder to save its state.
 The default is `/var/www/html/storage` which is correct for the official Docker
-container. It will create a dir inside this dir called `monica_reminder_data`
+container. It will create a dir inside this dir called `monica_reminder`
 and simply touch a file for each reminder, user and reminder date it has seen.
 This prevents monica-reminder repeating itself.
 
@@ -290,7 +290,6 @@ are due right now.
 
 ## Roadmap
 
-* `monica_reminder_data` no longer needs the postfix
 * Eliminate msmtp dep.
   * Install own email hook from within our script.
 * Change email template to include date of event and link to contact.

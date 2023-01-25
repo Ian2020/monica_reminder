@@ -39,7 +39,7 @@ relaunchincontainer() {
 }
 
 initdatahome() {
-  DATA_HOME=${DATA_HOME:-"/var/www/html/storage"}/$(basename "$0")_data
+  DATA_HOME=${DATA_HOME:-"/var/www/html/storage"}/$(basename "$0")
   if [[ ! -d "$DATA_HOME" ]]; then
     if ! mkdir -p "$DATA_HOME"; then
       log "failed to create DATA_HOME: $DATA_HOME, running as user: $(whoami)" ; exit 1

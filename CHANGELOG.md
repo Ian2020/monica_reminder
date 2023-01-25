@@ -26,7 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Instructions on installing with bin
+* README: instructions on installing with bin and example systemd timer and
+  service files.
+
+### Changed
+
+* `DATA_HOME` dir renamed `monica_reminder_data` -> `monica_reminder`.
 
 ## [0.0.0 - 2023-01-25](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.0)
 
