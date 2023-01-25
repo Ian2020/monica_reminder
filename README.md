@@ -72,15 +72,6 @@ bin install https://github.com/Ian2020/monica_reminder
 To install manually git clone this repo. Optionally copy `monica_reminder` to a
 dir on your PATH, e.g. `/usr/local/bin`.
 
-Next install `msmtp` in your Monica environment to allow monica-reminder to send
-emails. If monica is containerised this can be done temporarily by running a
-shell inside the container but make sure it ends up in your Dockerfile to
-survive restarts:
-
-```bash
-apt-get update ; apt-get install -y msmtp
-```
-
 ## Usage
 
 You should already have a working Monica instance and test emails should work
@@ -101,12 +92,12 @@ emails:
 #
 # If Monica is running in a container called 'monica':
 #
-CONTAINER=monica LOGDIR=- DRYRUN=true ./monica_reminder
+CONTAINER=monica LOGDIR=- DRYRUN=true monica_reminder
 #
 # Or if running on bare metal:
 #
 cd [MONICA BASE DIR e.g. /var/www/html]
-LOGDIR=- DRYRUN=true ./monica_reminder
+LOGDIR=- DRYRUN=true monica_reminder
 ```
 
 `LOGDIR=-` sends logs to stdout and `DRYRUN=true` means no email will be sent
@@ -130,11 +121,11 @@ your users you can instead do a one-off catch-up with emails disabled:
 #
 # If Monica is running in a container called 'monica':
 #
-CONTAINER=monica TODAY=yesterday NOSEND=true ./monica_reminder
+CONTAINER=monica TODAY=yesterday NOSEND=true monica_reminder
 #
 # Or if running on bare metal:
 #
-TODAY=yesterday NOSEND=true ./monica_reminder
+TODAY=yesterday NOSEND=true monica_reminder
 ```
 
 `TODAY=yesterday` tells monica-reminder to work as if it was running yesterday, thus
@@ -149,11 +140,11 @@ service on your host to simply run:
 #
 # If Monica is running in a container called 'monica':
 #
-CONTAINER=monica ./monica_reminder
+CONTAINER=monica monica_reminder
 #
 # Or if running on bare metal:
 #
-./monica_reminder
+monica_reminder
 ```
 
 Here's an example systemd service unit file `monica_reminder.service`:
