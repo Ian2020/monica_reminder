@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1 - 2023-01-25](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.1)
+
 ### Added
 
 * README: instructions on installing with bin and example systemd timer and

@@ -147,10 +147,51 @@ executed, is also released under the [Creative Commons Attribution ShareAlike
 
 ### Releasing
 
-This is a stub for now.
+In the following `<VERSION>` should be replaced with the new version number
+prepended with a `v`, e.g. `v1.0.0`.
 
-* Include `monica_reminder` as a release asset so that it can be installed
-  by [bin](https://github.com/marcosnils/bin).
+* Update [CHANGELOG.md](CHANGELOG.md)
+
+  The 'Unreleased' entry at the top of `CHANGELOG.md` should already
+  enumerate the significant updates to the new version. If not update it, retitle
+  it with the version number and date, then create a new empty 'Unreleased' entry.
+  At the bottom add a reference to the release tag.
+
+* Update copyright years if applicable
+
+  Run `copier update` and update the copyright year. You can use a range here so
+  long as you have a statement explaining this use in your README. You may want
+  to re-apply your copyright headers to files now and check REUSE compliance to
+  ensure all updated.
+
+* Commit, tag and push
+
+  Commit these changes (including the `CHANGELOG.md` changes) with the message
+  `monica_reminder <VERSION>`
+
+  Create a new annotated tag with:
+
+  ```bash
+  git tag -a -e -F <(sed "s/^#\+ //g" CHANGELOG.md) <VERSION>
+  ```
+
+  Include the `CHANGELOG.md` notes corresponding to the new version as the
+  tag annotation, except the first line should be:
+
+  ```text
+  monica_reminder <VERSION> - YYYY-MM-DD
+  ```
+
+  Push the new version commit and tag to GitLab via the following:
+
+  ```bash
+  git push --follow-tags
+  ```
+
+* Create a GitHub release - for now we're doing this through the website.
+  * Select the tag you just pushed
+  * Include `monica_reminder` as a release asset so that it can be installed
+    by [bin](https://github.com/marcosnils/bin).
 
 ## Vulnerability Reporting or Security Issues
 
