@@ -3,7 +3,8 @@ SPDX-FileCopyrightText: 2023 Ian2020 <https://github.com/Ian2020>
 
 SPDX-License-Identifier: CC-BY-SA-4.0
 
-Monica reminder is a BASH script that will takeover the emailing of reminders for a Monica instance if you are experiencing problems.
+Monica reminder is a BASH script that will takeover the emailing of reminders
+for a Monica instance if you are experiencing problems.
 
 For full copyright information see the AUTHORS file at the top-level
 directory of this distribution or at
