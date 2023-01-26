@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Reminder emails now include the date of the event in the body.
+* We now clean up old state to prevent `DATA_HOME` growing forever. Anything older
+  than 500 days as we should remember things we sent a bit over a year ago.
 
 ### Removed
 

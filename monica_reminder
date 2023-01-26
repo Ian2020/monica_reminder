@@ -125,6 +125,14 @@ initdatahome() {
   if [[ ! -w "$DATA_HOME" ]]; then
     log "no permission to write to DATA_HOME: $DATA_HOME, running as user: $(whoami)" ; exit 1
   fi
+
+  #Don't delete state on dry runs
+  if [ "$DRYRUN" != "true" ]; then
+    # Be very specific on filenames so even less chance of deleting wrong thing
+    if ! find "$DATA_HOME" -type f -name "*_????-??-??_*" -mtime +500 -exec rm {} \;; then
+      log "failed to clean old data files. Aborting" ; exit 1
+    fi
+  fi
 }
 
 sendsmtp() {

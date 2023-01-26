@@ -68,8 +68,9 @@ To install with [bin](https://github.com/marcosnils/bin):
 bin install https://github.com/Ian2020/monica_reminder
 ```
 
-To install manually git clone this repo. Optionally copy `monica_reminder` to a
-dir on your PATH, e.g. `/usr/local/bin`.
+To install manually git clone this repo. Clone a tag to ensure you're on an
+official version. Optionally copy `monica_reminder` to a dir on your PATH, e.g.
+`/usr/local/bin`.
 
 ## Usage
 
@@ -246,7 +247,8 @@ older than the number of days specified here. Default is 10 days.
 The default is `/var/www/html/storage` which is correct for the official Docker
 container. It will create a dir inside this dir called `monica_reminder`
 and simply touch a file for each reminder, user and reminder date it has seen.
-This prevents monica-reminder repeating itself.
+This prevents monica-reminder repeating itself. It will automatically delete old
+state so the dir cannot grow indefinately.
 
 **MONICABASEDIR=/PATH** Path to the Monica install, the default is the current
 working dir. This should be correct for running monica-reminder in your monica
@@ -290,8 +292,6 @@ are due right now.
 
 ## Roadmap
 
-* Cleanup old data files, anything older than a year potentially. So data dir
-  does not grow forever.
 * Get tests over it all
 * Remove restrictions and pain points:
   * Respect reminder intervals set per user. Note there seems to be a bug in
