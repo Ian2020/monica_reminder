@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* We now cope with "one time" events as well as "yearly".
+
 ## [0.0.2 - 2023-01-26](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.2)
 
 ### Added
@@ -37,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Our dependency on `msmtp` is no longer needed. Now we use Monica's own
   mechanism to send email. This means no need to change your Monica
-  system/container at all simplify installation.
+  system/container at all simplifying installation.
 
 ## [0.0.1 - 2023-01-25](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.1)
 

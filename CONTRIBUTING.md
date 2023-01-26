@@ -84,26 +84,26 @@ documentation to the project. We use the same DCO as many other projects: the
 > By making a contribution to this project, I certify that:
 >
 > (a) The contribution was created in whole or in part by me and I
->     have the right to submit it under the open source license
->     indicated in the file; or
+> have the right to submit it under the open source license
+> indicated in the file; or
 >
 > (b) The contribution is based upon previous work that, to the best
->     of my knowledge, is covered under an appropriate open source
->     license and I have the right under that license to submit that
->     work with modifications, whether created in whole or in part
->     by me, under the same open source license (unless I am
->     permitted to submit under a different license), as indicated
->     in the file; or
+> of my knowledge, is covered under an appropriate open source
+> license and I have the right under that license to submit that
+> work with modifications, whether created in whole or in part
+> by me, under the same open source license (unless I am
+> permitted to submit under a different license), as indicated
+> in the file; or
 >
 > (c) The contribution was provided directly to me by some other
->     person who certified (a), (b) or (c) and I have not modified
->     it.
+> person who certified (a), (b) or (c) and I have not modified
+> it.
 >
 > (d) I understand and agree that this project and the contribution
->     are public and that a record of the contribution (including all
->     personal information I submit with it, including my sign-off) is
->     maintained indefinitely and may be redistributed consistent with
->     this project or the open source license(s) involved.
+> are public and that a record of the contribution (including all
+> personal information I submit with it, including my sign-off) is
+> maintained indefinitely and may be redistributed consistent with
+> this project or the open source license(s) involved.
 
 Simply submitting a contribution implies this agreement however for larger
 contributions please include a "Signed-off-by" tag in every patch (this tag is a
@@ -144,6 +144,39 @@ executed, is also released under the [Creative Commons Attribution ShareAlike
 * When reusing components they MUST have a license compatible with the license of
   this software.
 * Test coverage is required except in case of trivial changes
+* Linting:
+  * BASH code should be clean with `shellcheck`
+  * Markdown should be clean with `mdl`
+
+Prerequisites:
+
+* Build file uses [ninja](https://ninja-build.org/).
+* Tests use [bats](https://github.com/bats-core/bats-core)
+
+Updating dependancies:
+
+* Both above tools are usually managed through system package manager and
+  therefore just keeping your system up-to-date is enough.
+* We have dependencies on
+  [bats-assert](https://github.com/bats-core/bats-assert) and
+  [bats-support](https://github.com/bats-core/bats-support) managed via git
+  submodules.
+  * Check current versions `git submodule`
+  * To update each individually:
+    * `cd test/test_helper/bats-assert/ ; git checkout TAG`
+    * `cd test/test_helper/bats-support/ ; git checkout TAG`
+
+Testing:
+
+We have a set of growing unit tests as part of the build.
+
+To test against your own live system be sure to use dryrun:
+
+```bash
+CONTAINER=monica DRYRUN=true ./monica_reminder
+```
+
+Optionally use `LOGDIR=-` to get logs to stdout.
 
 ### Releasing
 

@@ -26,7 +26,7 @@ It expects to be run at least daily however it can recover from multiple days of
 downtime and will email any missed reminders, marking them as "[LATE]". At the
 moment it has some restrictions but these could be fixed over time:
 
-* Only handles yearly reminders.
+* Only handles yearly and one-time reminders.
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
 * Hard-coded to ignore any events older than a month.
 * Doesn't disable Monica's own reminder mechanism, so some duplicates may be
@@ -53,9 +53,14 @@ moment it has some restrictions but these could be fixed over time:
 ## Background
 
 My own self-hosted Monica instance is wonderful to use but reminders never quite
-seem to work. The authors of Monica are hard at work on a [full rewrite](https://www.monicahq.com/blog/a-new-version-is-coming)
-so a pull request seems unlikely to succeed. Instead I decided to fix it from
-the outside with a BASH script that takes over reminders completely.
+seem to work. There are a few bugs on this: [#1638](https://github.com/monicahq/monica/issues/1638),
+[#4178](https://github.com/monicahq/monica/issues/4178),
+[#5681](https://github.com/monicahq/monica/issues/5681),
+[#6134](https://github.com/monicahq/monica/issues/6134).
+The authors of Monica are hard at work on a [full
+rewrite](https://www.monicahq.com/blog/a-new-version-is-coming) so pull
+requests seem unlikely to succeed in the meantime. Instead I decided to fix it
+from the outside with a BASH script that takes over reminders completely.
 
 ## Installation
 
@@ -292,13 +297,11 @@ are due right now.
 
 ## Roadmap
 
-* Get tests over it all
 * Remove restrictions and pain points:
+  * Other reminder frequencies: N week, month and year
   * Respect reminder intervals set per user. Note there seems to be a bug in
     Monica that users share reminder intervals though the DB table hints that
     they can be set per user(?)
-  * Cope with one-offs properly
-  * Other reminder frequencies: N week, month and year
   * Allow cutoff to be configurable
   * Disable Monica's own reminder handling
 * Change email template to include a link to contact. The link is not available

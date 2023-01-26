@@ -202,25 +202,34 @@ nearest_occurence() {
   #
   # result is also in ISO format
   local _today=$1;shift # in ISO format
-  local _reminder=$1 # in ISO format
-  local -i _halfyear=$((31556926/2)) # in epoch seconds
+  local _reminder=$1;shift # in ISO format
+  local _freq=$1 # year|one-time
 
-  local _thisyear;_thisyear=$(date -u -I -d "$_today");_thisyear=${_thisyear:0:4}
-  local _lastyear;_lastyear=$((_thisyear - 1))
-  local _nextyear;_nextyear=$((_thisyear + 1))
-  local -a _yearstotry=("$_lastyear" "$_thisyear" "$_nextyear")
+  if [[ "$_freq" = "one_time" ]]; then
+    echo "$_reminder"
+    return
+  elif [[ "$_freq" = "year" ]]; then
+    local -i _halfyear=$((31556926/2)) # in epoch seconds
 
-  for _year in "${_yearstotry[@]}"; do
-    local _datetotry;_datetotry="$_year${_reminder:4}"
-    _diff=$(( $(date -d "$_datetotry" +%s) - $(date -d "$_today" +%s) ))
-    _diff=${_diff#-}
-    if [[ "$_diff" -lt "$_halfyear" ]]; then
-      echo "$_datetotry"
-      return
-    fi
-  done
+    local _thisyear;_thisyear=$(date -u -I -d "$_today");_thisyear=${_thisyear:0:4}
+    local _lastyear;_lastyear=$((_thisyear - 1))
+    local _nextyear;_nextyear=$((_thisyear + 1))
+    local -a _yearstotry=("$_lastyear" "$_thisyear" "$_nextyear")
 
-  return 1
+    for _year in "${_yearstotry[@]}"; do
+      local _datetotry;_datetotry="$_year${_reminder:4}"
+      _diff=$(( $(date -d "$_datetotry" +%s) - $(date -d "$_today" +%s) ))
+      _diff=${_diff#-}
+      if [[ "$_diff" -lt "$_halfyear" ]]; then
+        echo "$_datetotry"
+        return
+      fi
+    done
+    return 1
+  else
+    # A frequency we don't deal with.
+    echo "1970-01-01"
+  fi
 }
 
 initlogging() {
@@ -347,73 +356,80 @@ getusers() {
 
 getreminders() {
   # TODO: cope with other types
-  execphpsql "select r.id, r.initial_date, r.title, c.first_name, c.last_name from reminders r join contacts c on r.contact_id = c.id where r.inactive=0 and frequency_type='year'"
+  execphpsql "select r.id, r.initial_date, r.frequency_type, r.title, c.first_name, c.last_name from reminders r join contacts c on r.contact_id = c.id where r.inactive=0"
   declare -g reminders="$results"
   # TODO: if there's no reminders log it and quit
 }
 
-if [[ -v CONTAINER ]]; then
-  relaunchincontainer
-fi
+main() {
+  if [[ -v CONTAINER ]]; then
+    relaunchincontainer
+  fi
 
-initlogging
-initdatahome
-preflight
-installemailcmd
-getusers
-getreminders
+  initlogging
+  initdatahome
+  preflight
+  installemailcmd
+  getusers
+  getreminders
 
-while IFS=$'\t' read -r id initial_date title first_name last_name ; do
-  # TODO: make cutoff configurable
-  _pastcutoff=2629743  # 1 month epoch seconds
-  log "CONSIDERING reminder id=$id, initial_date=$initial_date title=$title first_name=$first_name last_name=$last_name"
-  _nearestocc=$(nearest_occurence "$today" "$(date -d "$initial_date" -I)")
-  exit=$? ; [ "$exit" -eq 0 ] || exit 1
+  while IFS=$'\t' read -r id initial_date frequency_type title first_name last_name ; do
+    # TODO: make cutoff configurable
+    _pastcutoff=2629743  # 1 month epoch seconds
+    log "CONSIDERING reminder id=$id, initial_date=$initial_date frequency_type=$frequency_type title=$title first_name=$first_name last_name=$last_name"
+    _nearestocc=$(nearest_occurence "$today" "$(date -d "$initial_date" -I)" "$frequency_type")
+    exit=$? ; [ "$exit" -eq 0 ] || exit 1
 
-  # TODO: get these from DB
-  declare -a _reminderdaysbefore=("0" "7" "30")
+    # TODO: get these from DB
+    declare -a _reminderdaysbefore=("0" "7" "30")
 
-  for _daysbefore in "${_reminderdaysbefore[@]}"; do
-    _reminderday=$(( $(date -d "$_nearestocc" +%s) - (_daysbefore*86400) ))
-    _reminderday=$(date -d "@$_reminderday" -I)
+    for _daysbefore in "${_reminderdaysbefore[@]}"; do
+      _reminderday=$(( $(date -d "$_nearestocc" +%s) - (_daysbefore*86400) ))
+      _reminderday=$(date -d "@$_reminderday" -I)
 
-    while IFS=$'\t' read -r _emailnice _email ; do
-      # Have we already dealt with this ID, _reminderdate and email-recepient?
-      if [[ -f "$DATA_HOME/${id}_${_reminderday}_${_email}" ]]; then
-        log "skipping - we have processed this ${_daysbefore} day reminder already for ${_email}"
-        continue
-      fi
+      while IFS=$'\t' read -r _emailnice _email ; do
+        # Have we already dealt with this ID, _reminderdate and email-recepient?
+        if [[ -f "$DATA_HOME/${id}_${_reminderday}_${_email}" ]]; then
+          log "skipping - we have processed this ${_daysbefore} day reminder already for ${_email}"
+          continue
+        fi
 
-      if [[ "$_reminderday" = "$today" ]]; then
-        sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
-        # Mark a file to say we dealt with this reminder
-        [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
-      else
-        true
-        if [[ "$_reminderday" < "$today" ]]; then
-          if [[ "$_nearestocc" > "$today" ]]; then
-            # Event still in future
-            log "we should have sent a reminder $_reminderday, sorry!"
-            sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
-          else
-            # Event has past, but by how much?
-            _diff=$(( $(date -d "$today" +%s) - $(date -d "$_nearestocc" +%s) ))
-            if [[ "$_diff" -lt "$_pastcutoff" ]]; then
-              log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
-              sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
-              # TODO: potentially we flag that we've now dealt with late reminders for this event
-              # so users only get one late reminder not one for every late reminder
-            else
-              log "event has past more than a month ago, ignore"
-            fi
-          fi
+        if [[ "$_reminderday" = "$today" ]]; then
+          sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
           # Mark a file to say we dealt with this reminder
           [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
         else
-          log "${_daysbefore} day reminder not yet due for ${_email}"
+          true
+          if [[ "$_reminderday" < "$today" ]]; then
+            if [[ "$_nearestocc" > "$today" ]]; then
+              # Event still in future
+              log "we should have sent a reminder $_reminderday, sorry!"
+              sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+            else
+              # Event has past, but by how much?
+              _diff=$(( $(date -d "$today" +%s) - $(date -d "$_nearestocc" +%s) ))
+              if [[ "$_diff" -lt "$_pastcutoff" ]]; then
+                log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
+                sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+                # TODO: potentially we flag that we've now dealt with late reminders for this event
+                # so users only get one late reminder not one for every late reminder
+              else
+                log "event has past more than a month ago, ignore"
+              fi
+            fi
+            # Mark a file to say we dealt with this reminder
+            [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
+          else
+            log "${_daysbefore} day reminder not yet due for ${_email}"
+          fi
         fi
-      fi
 
-    done < <(echo "$users")
-  done
-done < <(echo "$reminders")
+      done < <(echo "$users")
+    done
+  done < <(echo "$reminders")
+}
+
+# call main if not sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

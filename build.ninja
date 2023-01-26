@@ -27,11 +27,20 @@ include galagos/build.ninja
 
 build build: phony
 build test: phony $
-  galagos_compliance
+  galagos_compliance $
+  bats
 default test
 build update: phony $
   galagos_update
 build deploy: phony
+
+# Bats Tests
+
+rule bats
+  command = bats ${in}
+  pool = console
+
+build bats: bats test/nearest_occurence.bats
 
 # Helper Targets
 
@@ -61,8 +70,10 @@ build _addheaders_cc-by-sa_python: galagos_addheader $
   galagos_style=python
 
 build _addheaders_gpl3_python: galagos_addheader $
+                               .gitmodules $
                                build.ninja $
                                monica_reminder $
-                               galagos/build.ninja
+                               galagos/build.ninja $
+                               test/nearest_occurence.bats
   galagos_license=GPL-3.0-or-later
   galagos_style=python
