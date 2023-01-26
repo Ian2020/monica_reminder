@@ -24,7 +24,7 @@ problems. It is highly configurable and logs all its decisions.
 
 It expects to be run at least daily however it can recover from multiple days of
 downtime and will email any missed reminders, marking them as "[LATE]". At the
-moment it has some restrictions but these will be fixed over time:
+moment it has some restrictions but these could be fixed over time:
 
 * Only handles yearly reminders.
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
@@ -45,7 +45,6 @@ moment it has some restrictions but these will be fixed over time:
 * [How it Works](#how-it-works)
 * [Troubleshooting](#troubleshooting)
 * [Roadmap](#roadmap)
-* [Implementation Notes](#implementation-notes)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -303,32 +302,11 @@ are due right now.
   * Allow cutoff to be configurable
   * Disable Monica's own reminder handling
 * Change email template to include a link to contact. The link is not available
-  from the database, it appears to be a route calculated inside Monica unf.
-
-## Implementation Notes
-
-Some questions below on how we can avoid altering the container so users can
-always use latest Monica.
-
-Can we insert the cron job via a bind mount?
-
-* busybox cron does run as root but seems to ignore `etc/cron.d` where we
-  might mount an extra file. Are we sure we have format right? What if we
-  use a crontab for root and just change user `su` in the job?
-* Tried root's crontab which works but we can't switch into the
-  environment of www-data as it has nologin so we can't get all the MONICA
-  settings.
-* Other alternative is to somehow concat the cron line to www-data's
-  crontab by some other means at restart...but this is getting v hacky and
-  not going to work for everyone anyway. Leave it to user at this point.
-* Or inject ourselves somehow into monica's laravel schedule but that
-  looks like nothing short of a code change in Monica's kernel PHP.
-* How about podman healthcheck? This is schedulable and runs on the host.
-  Uses systemd timers. Might as well just use systemd directly though I guess?
-  Or cron? On the host. Then we could as part of same step cp in our email
-  command - or even `monica_reminder` does all this, copying
-  itself into container, with its email command and then setting itself
-  off? That's best.
+  from the database, it appears to be a route calculated inside Monica unf. Can
+  we just plug into the existing code that sends reminder emails so we also gain
+  translations?
+* Test if monica-reminder works with 'stay in touch' reminders
+  ["Stay in Touch", cron, and database connection issues · Issue #4842 · monicahq/monica](https://github.com/monicahq/monica/issues/4842)
 
 ## Contributing
 
