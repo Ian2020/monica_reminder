@@ -77,6 +77,10 @@ official version. Optionally copy `monica_reminder` to a dir on your PATH, e.g.
 
 ## Usage
 
+Make sure you have **BACKUPS** before running monica-reminder. Whilst it should
+never touch anything other than it's own logs/data I can't predict its behaviour
+in every environment.
+
 You should already have a working Monica instance and test emails should work
 i.e. this command run on your Monica host results in you receiving an email:
 
