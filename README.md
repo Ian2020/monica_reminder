@@ -27,7 +27,6 @@ downtime and will email any missed reminders, marking them as "[LATE]". At the
 moment it has some restrictions but these could be fixed over time:
 
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
-* Hard-coded to ignore any events older than a month.
 * Doesn't disable Monica's own reminder mechanism, so some duplicates may be
   received.
 
@@ -266,10 +265,11 @@ located.
 Monica-reminder's flow is:
 
 * Check what day it is TODAY (can be configured, see below)
-* Fetch all reminders and users from the Monica database
-* For each reminder and each user:
-  * Consult our saved state in `DATA_HOME` - if we've already dealt with this
-    reminder skip it.
+* Fetch all events and users from the Monica database
+* For each event and each user:
+  * If it's a repeating event calculate the nearest occurence to today.
+  * Consult our saved state in `DATA_HOME` - if we've already sent the expected
+    reminders skip it.
   * Any reminders due for the future can be ignored.
   * If the event is too far in the past (1 month) mark it as dealt with and
     ignore it.
