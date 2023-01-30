@@ -24,6 +24,8 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
+declare -gar monthsdays=(31 28 31 30 31 30 31 31 30 31 30 31)
+
 monicaremindersendphp=$(cat << "EOF"
 <?php
 
@@ -196,39 +198,168 @@ Monica xoxo
   [ "$DRYRUN" == "true" ] || sendsmtp "$_email" "$_subject" "$_body"
 }
 
+leapyear() {
+  local -i _year;_year=$1;shift
+
+  if [ $(( _year % 4 )) -eq 0 ] && 
+    ! { [ $(( _year % 100 )) -eq 0 ] && [ ! $(( _year % 400 )) -eq 0 ]; }; then
+    echo "true"; return
+  fi
+
+  echo "false"
+}
+
+timespan() {
+  # Returns timespan between two dates in the quantity specified
+  local _date1=$1;shift # in ISO format
+  local _date2=$1;shift # in ISO format
+  local _quanta=$1;shift # year|month|week|second
+
+  # Check the dates valid
+  date -d "$_date1" > /dev/null 2>&1 || return 1
+  date -d "$_date2" > /dev/null 2>&1 || return 1
+
+  if [[ -z "$_date1" || -z "$_date2" ]]; then
+    log "timespan: one of the dates was empty: _date1: $_date1, _date2: $_date2"
+    return 1
+  fi
+  if [[ "$_date1" > "$_date2" ]]; then
+    log "timespan: _date1: $_date1 was later than _date2: $_date2, \
+         we expect them supplied in chronological order"
+    return 1
+  fi
+
+  # 10# forces base 10 as leading zeros are otherwise seen as octal
+  local -i _date1_year="${_date1:0:4}"
+  local -i _date1_month=10#"${_date1:5:2}"
+  local -i _date1_day=10#"${_date1:8:2}"
+  local -i _date2_year="${_date2:0:4}"
+  local -i _date2_month=10#"${_date2:5:2}"
+  local -i _date2_day=10#"${_date2:8:2}"
+
+  case "$_quanta" in
+    "year")
+      local -i _addition
+
+      if [[ "$_date2_month" -gt "$_date1_month" ]]; then
+        _addition=0
+      elif [[ "$_date2_month" -eq "$_date1_month" ]]; then
+        _addition=-1
+        if [[ "$_date2_day" -ge "$_date1_day" ]]; then
+          _addition=0
+        fi
+      else
+        _addition=-1
+      fi
+      local -i _years
+      _years=$(( (_date2_year - _date1_year) + _addition ))
+      if [[ "$_years" -lt 0 ]]; then _years=0; fi
+      echo "$_years"
+      ;;
+    "month")
+      _months=$(( (_date2_year - _date1_year) * 12 ))
+      _months=$(( _months + (_date2_month - _date1_month) ))
+      if [[ "$_date2_day" -lt "$_date1_day" ]] && [[ "$_months" -gt 0 ]]; then
+        _months=$(( _months - 1 ))
+      fi
+      echo "$_months"
+      ;;
+    "week")
+      local -i _date1_secs; _date1_secs=$(date -d "$_date1" +%s) || return 1
+      local -i _date2_secs; _date2_secs=$(date -d "$_date2" +%s) || return 1
+      echo $(( (_date2_secs - _date1_secs) / (7*24*60*60) ))
+      ;;
+    "second")
+      local -i _date1_secs; _date1_secs=$(date -d "$_date1" +%s) || return 1
+      local -i _date2_secs; _date2_secs=$(date -d "$_date2" +%s) || return 1
+      echo $(( _date2_secs - _date1_secs )) || return 1
+      ;;
+    *)
+      log "timespan: invalid quanta: $_quanta"
+      return 1
+  esac
+}
+
+movedate() {
+  # Moves given date forward by (freq * freq_num)
+  local _date=$1;shift # in ISO format
+  local _freq=$1;shift # year|month|week
+  local -i _freq_num=$1 # a number, e.g. 2 to mean bi-yearly (e.g.)
+
+  # Check the date
+  date -d "$_date" > /dev/null 2>&1 || return 1
+
+  # Pull out components
+  # 10# forces base 10 as leading zeros are otherwise seen as octal
+  local -i _day=10#"${_date:8:2}"
+  local -i _month=10#"${_date:5:2}"
+  local -i _year="${_date:0:4}"
+
+  case "$_freq" in
+    "year")
+      # add to freq_num to year
+      _year=$(( _year + _freq_num ))
+      _date="${_year}${_date:4}"
+      ;;
+    "month")
+      _month=$(( _month + _freq_num ))
+      while [[ _month -gt 12 ]]; do
+        _year=$(( _year + 1))
+        _month=$(( _month - 12))
+      done
+      # Lookup num days of this month
+      local -i _mymonthsdays=${monthsdays[$(( "$_month" - 1 ))]}
+      # If our day is past the end of the month pull it back
+      if [[ "$_day" -gt "$_mymonthsdays" ]]; then
+        _day="$_mymonthsdays"
+        # Check for leap year
+        if [[ "$_month" -eq 2 ]] && [[ $(leapyear "$_year") = "true" ]]; then
+          _day=29
+        fi
+      fi
+      _date="$_year-$(printf %02d $_month)-$(printf %02d "$_day")"
+      ;;
+    "week")
+      # add 7*freq_num
+      _date=$(date -d "$_date" +%s) # convert to epoch secs
+      _date=$(( "$_date" + (7 * 24 * 60 * 60 * "$_freq_num") )) # add
+      _date=$(date -d "@$_date" -I) # convert back to ISO
+      ;;
+    "*")
+      log "movedate: unexpected frequency: $_freq"
+      return 1
+      ;;
+  esac
+
+  echo "$_date"
+}
+
 nearest_occurence() {
-  # TODO: this only works for frequency_type: "year"
-  # for "one_time" we should simply return the date we're given
-  #
   # result is also in ISO format
   local _today=$1;shift # in ISO format
   local _reminder=$1;shift # in ISO format
-  local _freq=$1 # year|one-time
+  local _freq=$1;shift # year|one-time
+  local -i _freq_num=$1 # a number, e.g. 2 to mean bi-yearly (e.g.)
 
-  if [[ "$_freq" = "one_time" ]]; then
+  if [[ "$_freq" = "one_time" || "$_reminder" > "$_today" ]]; then
     echo "$_reminder"
     return
-  elif [[ "$_freq" = "year" ]]; then
-    local -i _halfyear=$((31556926/2)) # in epoch seconds
+  fi
 
-    local _thisyear;_thisyear=$(date -u -I -d "$_today");_thisyear=${_thisyear:0:4}
-    local _lastyear;_lastyear=$((_thisyear - 1))
-    local _nextyear;_nextyear=$((_thisyear + 1))
-    local -a _yearstotry=("$_lastyear" "$_thisyear" "$_nextyear")
+  local -i _gap _factor _backspan _nextspan
+  local _lastdate _nextdate
 
-    for _year in "${_yearstotry[@]}"; do
-      local _datetotry;_datetotry="$_year${_reminder:4}"
-      _diff=$(( $(date -d "$_datetotry" +%s) - $(date -d "$_today" +%s) ))
-      _diff=${_diff#-}
-      if [[ "$_diff" -lt "$_halfyear" ]]; then
-        echo "$_datetotry"
-        return
-      fi
-    done
-    return 1
+  _gap=$(timespan "$_reminder" "$_today" "$_freq") || return 1
+  _factor=$(( _gap / _freq_num ))
+  _lastdate=$(movedate "$_reminder" "$_freq" "$(( _factor * _freq_num))") || return 1
+  _backspan=$(timespan "$_lastdate" "$_today" "second") || return 1
+  _nextdate=$(movedate "$_lastdate" "$_freq" "$_freq_num") || return 1
+  _nextspan=$(timespan "$_today" "$_nextdate" "second") || return 1
+
+  if [[ "$_backspan" -lt "$_nextspan" ]]; then
+    echo "$_lastdate"
   else
-    # A frequency we don't deal with.
-    echo "1970-01-01"
+    echo "$_nextdate"
   fi
 }
 
@@ -263,7 +394,7 @@ initlogging() {
 }
 
 log() {
-  if [[ "$logdir" == "-" ]]; then
+  if [[ ! -v "$logdir" || "$logdir" == "-" ]]; then
     echo "monica_reminder: $1"
   else
     echo "$1" >> "$logfile"
@@ -356,7 +487,7 @@ getusers() {
 
 getreminders() {
   # TODO: cope with other types
-  execphpsql "select r.id, r.initial_date, r.frequency_type, r.title, c.first_name, c.last_name from reminders r join contacts c on r.contact_id = c.id where r.inactive=0"
+  execphpsql "select r.id, r.initial_date, r.frequency_type, r.frequency_number, r.title, c.first_name, c.last_name from reminders r join contacts c on r.contact_id = c.id where r.inactive=0"
   declare -g reminders="$results"
   # TODO: if there's no reminders log it and quit
 }
@@ -373,17 +504,18 @@ main() {
   getusers
   getreminders
 
-  while IFS=$'\t' read -r id initial_date frequency_type title first_name last_name ; do
+  while IFS=$'\t' read -r id initial_date frequency_type frequency_number title first_name last_name ; do
     # TODO: make cutoff configurable
     _pastcutoff=2629743  # 1 month epoch seconds
-    log "CONSIDERING reminder id=$id, initial_date=$initial_date frequency_type=$frequency_type title=$title first_name=$first_name last_name=$last_name"
-    _nearestocc=$(nearest_occurence "$today" "$(date -d "$initial_date" -I)" "$frequency_type")
+    log "CONSIDERING reminder id=$id, initial_date=$initial_date frequency_type=$frequency_type frequency_number=$frequency_number title=$title first_name=$first_name last_name=$last_name"
+    _nearestocc=$(nearest_occurence "$today" "$(date -d "$initial_date" -I)" "$frequency_type" "$frequency_number")
     exit=$? ; [ "$exit" -eq 0 ] || exit 1
 
     # TODO: get these from DB
     declare -a _reminderdaysbefore=("0" "7" "30")
 
     for _daysbefore in "${_reminderdaysbefore[@]}"; do
+      # TODO: could we use move date here instead?
       _reminderday=$(( $(date -d "$_nearestocc" +%s) - (_daysbefore*86400) ))
       _reminderday=$(date -d "@$_reminderday" -I)
 
@@ -395,7 +527,7 @@ main() {
         fi
 
         if [[ "$_reminderday" = "$today" ]]; then
-          sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
+          sendmail "$_nearestocc" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "false"
           # Mark a file to say we dealt with this reminder
           [ "$DRYRUN" == "true" ] || touch "$DATA_HOME/${id}_${_reminderday}_${_email}"
         else
@@ -404,13 +536,13 @@ main() {
             if [[ "$_nearestocc" > "$today" ]]; then
               # Event still in future
               log "we should have sent a reminder $_reminderday, sorry!"
-              sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+              sendmail "$_nearestocc" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
             else
               # Event has past, but by how much?
               _diff=$(( $(date -d "$today" +%s) - $(date -d "$_nearestocc" +%s) ))
               if [[ "$_diff" -lt "$_pastcutoff" ]]; then
                 log "event has recently past but we should have sent a reminder $_reminderday, sorry!"
-                sendmail "$initial_date" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
+                sendmail "$_nearestocc" "$_email" "$_emailnice" "$_daysbefore" "$first_name $last_name" "$title" "true"
                 # TODO: potentially we flag that we've now dealt with late reminders for this event
                 # so users only get one late reminder not one for every late reminder
               else

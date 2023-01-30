@@ -26,7 +26,6 @@ It expects to be run at least daily however it can recover from multiple days of
 downtime and will email any missed reminders, marking them as "[LATE]". At the
 moment it has some restrictions but these could be fixed over time:
 
-* Only handles yearly and one-time reminders.
 * Hard-coded to send reminders at 0, 7 and 30 days ahead of an event.
 * Hard-coded to ignore any events older than a month.
 * Doesn't disable Monica's own reminder mechanism, so some duplicates may be
@@ -298,7 +297,9 @@ are due right now.
 ## Roadmap
 
 * Remove restrictions and pain points:
-  * Other reminder frequencies: N week, month and year
+  * If a reminder interval is longer than the frequency on an event (e.g. 30 day
+    reminder for a weekly event) than don't send that reminder as it'll always
+    be late.
   * Respect reminder intervals set per user. Note there seems to be a bug in
     Monica that users share reminder intervals though the DB table hints that
     they can be set per user(?)

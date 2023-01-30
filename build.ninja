@@ -37,10 +37,10 @@ build deploy: phony
 # Bats Tests
 
 rule bats
-  command = bats ${in}
+  command = bats test
   pool = console
 
-build bats: bats test/nearest_occurence.bats
+build bats: bats
 
 # Helper Targets
 
@@ -74,6 +74,9 @@ build _addheaders_gpl3_python: galagos_addheader $
                                build.ninja $
                                monica_reminder $
                                galagos/build.ninja $
-                               test/nearest_occurence.bats
+                               test/nearest_occurence.bats $
+                               test/leapyear.bats $
+                               test/movedate.bats $
+                               test/timespan.bats
   galagos_license=GPL-3.0-or-later
   galagos_style=python

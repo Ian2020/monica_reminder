@@ -27,7 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* We now cope with "one time" events as well as "yearly".
+* Cope with all frequencies of events Monica supports: N yearly, N monthly, N
+  weekly and one-offs. Note that our hard-coded seting of 7/30 day reminders
+  means for any event that occurs more frequently than 30 days will always have
+  a late 30 day reminder. We should fix this in future.
 
 ## [0.0.2 - 2023-01-26](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.2)
 
