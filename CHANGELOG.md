@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3 - 2023-01-26](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.3)
+
 ### Added
 
 * Cope with all frequencies of events Monica supports: N yearly, N monthly, N
