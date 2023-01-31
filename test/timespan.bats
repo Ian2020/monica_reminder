@@ -24,105 +24,101 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
+bats_require_minimum_version 1.5.0
+
 source "$BATS_TEST_DIRNAME"/../monica_reminder
 load test_helper/bats-support/load
 load test_helper/bats-assert/load
 
 @test "invalid dates" {
-  run timespan "XXXX" "2001-01-02" "year" ; assert [ "$status" -eq 1 ]
-  run timespan "2001-01-02" "XXXX" "year" ; assert [ "$status" -eq 1 ]
-  run timespan "" "2001-01-2" "year" ; assert [ "$status" -eq 1 ]
-  run timespan "2001-01-2" "" "year" ; assert [ "$status" -eq 1 ]
+  run -1 timespan "XXXX" "2001-01-02" "year"
+  run -1 timespan "2001-01-02" "XXXX" "year"
+  run -1 timespan "" "2001-01-2" "year"
+  run -1 timespan "2001-01-2" "" "year"
 }
 
 @test "invalid dates - date2 before date1" {
-  run timespan "2002-01-02" "2001-01-02" "year" ; assert [ "$status" -eq 1 ]
+  run -1 timespan "2002-01-02" "2001-01-02" "year"
 }
 
 @test "invalid quanta" {
-  run timespan "2000-01-02" "2001-01-02" "nonsense" ; assert [ "$status" -eq 1 ]
+  run -1 timespan "2000-01-02" "2001-01-02" "nonsense"
 }
 
 @test "seconds: one day" {
-  run timespan "2001-01-01" "2001-01-02" "second"
-
-  assert [ "$status" -eq 0 ]
+  run -0 timespan "2001-01-01" "2001-01-02" "second"
   assert [ "$output" = $(( 60 * 60 * 24 )) ]
 }
 
 @test "seconds: one week" {
-  run timespan "2001-01-01" "2001-01-08" "second"
-
-  assert [ "$status" -eq 0 ]
+  run -0 timespan "2001-01-01" "2001-01-08" "second"
   assert [ "$output" = $(( 60 * 60 * 24 * 7 )) ]
 }
 
 @test "seconds: thirty years" {
-  run timespan "1970-01-01" "2000-01-01" "second"
-
-  assert [ "$status" -eq 0 ]
+  run -0 timespan "1970-01-01" "2000-01-01" "second"
   assert [ "$output" = 946688400 ]
 }
 
 @test "weeks: zero weeks" {
   # One day
-  run timespan "2001-01-01" "2001-01-02" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-01" "2001-01-02" "week" ; assert [ "$output" = 0 ]
   # Just shy one week
-  run timespan "2001-01-01" "2001-01-07" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-01" "2001-01-07" "week" ; assert [ "$output" = 0 ]
   # Just shy across a month end
-  run timespan "2001-01-30" "2001-02-05" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-30" "2001-02-05" "week" ; assert [ "$output" = 0 ]
 }
 
 @test "weeks: one week" {
   # One week
-  run timespan "2001-01-01" "2001-01-08" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2001-01-08" "week" ; assert [ "$output" = 1 ]
   # Just short two weeks
-  run timespan "2001-01-01" "2001-01-14" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2001-01-14" "week" ; assert [ "$output" = 1 ]
   # Just short across a month
-  run timespan "2001-01-20" "2001-02-02" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-20" "2001-02-02" "week" ; assert [ "$output" = 1 ]
 }
 
 @test "weeks: multiple weeks" {
-  run timespan "2001-01-01" "2001-09-08" "week" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 35 ]
+  run -0 timespan "2001-01-01" "2001-09-08" "week" ; assert [ "$output" = 35 ]
 }
 
 @test "months: zero months" {
-  run timespan "2001-01-01" "2001-01-08" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
-  run timespan "2001-01-05" "2001-02-01" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-01" "2001-01-08" "month" ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-05" "2001-02-01" "month" ; assert [ "$output" = 0 ]
 }
 
 @test "months: one month" {
-  run timespan "2001-01-01" "2001-02-01" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
-  run timespan "2001-01-05" "2001-02-10" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2001-02-01" "month" ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-05" "2001-02-10" "month" ; assert [ "$output" = 1 ]
 }
 
 @test "months: multiple months" {
-  run timespan "2001-05-15" "2002-03-01" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 9 ]
-  run timespan "2001-01-01" "2003-02-01" "month" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 25 ]
+  run -0 timespan "2001-05-15" "2002-03-01" "month" ; assert [ "$output" = 9 ]
+  run -0 timespan "2001-01-01" "2003-02-01" "month" ; assert [ "$output" = 25 ]
 }
 
 @test "years: zero years" {
   # One day
-  run timespan "2001-01-01" "2001-01-02" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-01" "2001-01-02" "year" ; assert [ "$output" = 0 ]
   # Few months
-  run timespan "2001-01-01" "2001-09-02" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-01" "2001-09-02" "year" ; assert [ "$output" = 0 ]
   # Cross a year boundary
-  run timespan "2001-09-01" "2002-08-02" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-09-01" "2002-08-02" "year" ; assert [ "$output" = 0 ]
   # Just one day shy
-  run timespan "2001-01-02" "2002-01-01" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 0 ]
+  run -0 timespan "2001-01-02" "2002-01-01" "year" ; assert [ "$output" = 0 ]
 }
 
 @test "years: one year" {
   # Exactly one year
-  run timespan "2001-01-01" "2002-01-01" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
-  run timespan "2001-04-06" "2002-04-06" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2002-01-01" "year" ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-04-06" "2002-04-06" "year" ; assert [ "$output" = 1 ]
   # Over a year but not two
-  run timespan "2001-01-01" "2002-06-01" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2002-06-01" "year" ; assert [ "$output" = 1 ]
   # Just short two years
-  run timespan "2001-01-01" "2002-12-31" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 1 ]
+  run -0 timespan "2001-01-01" "2002-12-31" "year" ; assert [ "$output" = 1 ]
 }
 
 @test "years: multiple years" {
-  run timespan "2001-04-06" "2008-04-06" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 7 ]
-  run timespan "2001-04-06" "2008-03-06" "year" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = 6 ]
+  run -0 timespan "2001-04-06" "2008-04-06" "year" ; assert [ "$output" = 7 ]
+  run -0 timespan "2001-04-06" "2008-03-06" "year" ; assert [ "$output" = 6 ]
 }

@@ -24,17 +24,19 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
+bats_require_minimum_version 1.5.0
+
 source "$BATS_TEST_DIRNAME"/../monica_reminder
 load test_helper/bats-support/load
 load test_helper/bats-assert/load
 
 @test "non-leap years" {
-  run leapyear "1900" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = "false" ]
-  run leapyear "2022" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = "false" ]
+  run -0 leapyear "1900" ; assert [ "$output" = "false" ]
+  run -0 leapyear "2022" ; assert [ "$output" = "false" ]
 }
 
 @test "leap years" {
-  run leapyear "2016" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = "true" ]
-  run leapyear "2020" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = "true" ]
-  run leapyear "2024" ; assert [ "$status" -eq 0 ] ; assert [ "$output" = "true" ]
+  run -0 leapyear "2016" ; assert [ "$output" = "true" ]
+  run -0 leapyear "2020" ; assert [ "$output" = "true" ]
+  run -0 leapyear "2024" ; assert [ "$output" = "true" ]
 }

@@ -24,14 +24,15 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
+bats_require_minimum_version 1.5.0
+
 source "$BATS_TEST_DIRNAME"/../monica_reminder
 load test_helper/bats-support/load
 load test_helper/bats-assert/load
 
 @test "log: to stdout when not initialised" {
   # This ensures we log to stdout when monica_reminder is dot sourced for testing etc
-  run log "something"
-  assert [ "$status" -eq 0 ]
+  run -0 log "something"
   assert [ "$output" = "monica_reminder: something" ]
 }
 
