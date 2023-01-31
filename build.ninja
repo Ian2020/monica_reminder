@@ -76,6 +76,7 @@ build _addheaders_gpl3_python: galagos_addheader $
                                galagos/build.ninja $
                                test/nearest_occurence.bats $
                                test/leapyear.bats $
+                               test/monica_reminder.bats $
                                test/movedate.bats $
                                test/timespan.bats
   galagos_license=GPL-3.0-or-later

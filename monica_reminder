@@ -394,7 +394,7 @@ initlogging() {
 }
 
 log() {
-  if [[ ! -v "$logdir" || "$logdir" == "-" ]]; then
+  if [[ ! -v logdir || "$logdir" == "-" ]]; then
     echo "monica_reminder: $1"
   else
     echo "$1" >> "$logfile"
