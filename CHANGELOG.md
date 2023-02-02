@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* Our shebang is now as portable as it can be:
+  [you should use #!/usr/bin/env bash for portability](https://stackoverflow.com/a/10383546)
+  We need to run on a variety of linuxes as we can be run both inside/outside
+  containers.
+
 ## [0.0.4 - 2023-01-31](https://github.com/Ian2020/monica_reminder/releases/tag/v0.0.4)
 
 ### Fixed
