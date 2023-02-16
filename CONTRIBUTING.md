@@ -30,7 +30,6 @@ Feedback and contribution are welcome.
   * [License](#license)
   * [Code Changes](#code-changes)
   * [Releasing](#releasing)
-* [Vulnerability Reporting or Security Issues](#vulnerability-reporting-or-security-issues)
 * [Attribution](#attribution)
 
 <!-- vim-markdown-toc -->
@@ -227,27 +226,6 @@ prepended with a `v`, e.g. `v1.0.0`.
   * Take release notes straight from the CHANGELOG
   * Include `monica_reminder` as a release asset so that it can be installed
     by [bin](https://github.com/marcosnils/bin).
-
-## Vulnerability Reporting or Security Issues
-
-If you find a significant vulnerability, or evidence of one, please send an
-email to the security contact that you have such information, and we'll tell
-you the next steps. For now, the security contact is: infoNOSPAM@galagic.com
-(remove the NOSPAM marker).
-
-Please use an email system that supports hop-to-hop encryption using STARTTLS
-when reporting vulnerabilities. Examples of such systems include Gmail,
-Outlook.com, and runbox.com. See STARTTLS Everywhere if you wish to learn more
-about efforts to encourage the use of STARTTLS. Your email client should use
-encryption to communicate with your email system (i.e., if you use a web-based
-email client then use HTTPS, and if you use email client software then configure
-it to use encryption). Hop-to-hop encryption isn't as strong as end-to-end
-encryption, but we've decided that it's strong enough for this purpose and it's
-much easier to get everyone to use it.
-
-We will gladly give credit to anyone who reports a vulnerability so that we can
-fix it. If you want to remain anonymous or pseudonymous instead, please let us
-know that; we will gladly respect your wishes.
 
 ## Attribution
 
